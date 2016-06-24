@@ -1,0 +1,35 @@
+See all the settings with $$
+
+X AXIS
+85 millimeters commanded
+200 step / mm set
+297 millimeters traveled
+
+(85 mm commanded) * (200 steps / mm) = 17000 steps
+(17000 steps) / (297 mm) = 57.24 steps / mm
+
+
+Y AXIS (should be identical b/c of identical hardware)
+75 mm commanded
+250 step / mm set
+303.21 mm traveled
+
+(75 mm commanded) * (250 steps / mm) = 18750 steps
+(18750 steps) / (303.21 mm) = 61.84 steps / mm
+
+
+I'll split the difference and say that both axes have 59.5 steps / mm
+If it's an issue later we can re-measure with better tools
+
+
+I'm setting the max travel to be 400mm, which is above the distance the thing can actually travel, so be safe
+
+
+I'm setting acceleration to 30 mm/s^2. I'm setting max velocity to 1800 mm/min. Both of these are arbitrary
+
+
+These values all persist over restarts
+
+
+For the "Current" values I turned the current all the way down and then turned it 90 degrees clockwise so the slit was at / this angle
+
