@@ -41,22 +41,24 @@ s.flushInput()  # Flush startup text in serial input
 
 cmd = []
 
-lines = ["G21",
-         "G91",
-         "G94",
-         # "G01 F1500",
-         # "$$"]
-         "$$",
-         "G01 F1500",
-         "X-10 Y-100"]
+# GCODE list: http://www.cnccookbook.com/CCCNCGCodeRef.html
+lines = ["G21",  # Program coordinates are in mm
+         "G91",  # Incremental programming of XYZ (command 5 does +5 instead of global position 5)
+         "G94",  # Feed mode is units/minute. Because of G21, this means mm/minute
+         # "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
+         # "$$"]  # Display the settings
+         "$$",  # Display the settings
+         "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
+         "X-10 Y-100"]  # Because of G01, this should move X and Y by their units
 
+# These do different things according to what is commented out
 # scalar = 8
 # for i in range(296 / scalar):
 #     # speed = ((random() - 0.5) * 2) * 100 + 1500
-#     speed = 1500
 #     # lines += ["G01 F{0:.1f}".format(speed), "X{} Y0".format(scalar)]
 #     lines += ["X{} Y0".format(scalar)]
 
+# These do different things according to what is commented out
 #### for i in range(1000):
 ####     v = float(i) / 50
 ####     lines.append("X{0:.2f} Y{1:.2f}".format(1 - v, v))
@@ -77,6 +79,8 @@ for line in lines:
     else:
         grbl_out = s.readline(30) # Wait for grbl response with carriage return
         print("grbl_out: {}".format(grbl_out))
+    ## If the sleep is commented out the controller will remember a fixed number
+    ##   of commands and then will buffer the rest
     # time.sleep(0.1)
 
 # Wait here until grbl is finished to close serial port and file.
