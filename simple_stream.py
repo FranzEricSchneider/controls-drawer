@@ -28,6 +28,7 @@ THE SOFTWARE.
 from random import random
 import serial
 import time
+import numpy as np
 
 # Open grbl serial port
 s = serial.Serial('/dev/ttyUSB0', 115200)
@@ -45,11 +46,11 @@ cmd = []
 lines = ["G21",  # Program coordinates are in mm
          "G91",  # Incremental programming of XYZ (command 5 does +5 instead of global position 5)
          "G94",  # Feed mode is units/minute. Because of G21, this means mm/minute
-         # "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
-         # "$$"]  # Display the settings
-         "$$",  # Display the settings
          "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
-         "X-10 Y-100"]  # Because of G01, this should move X and Y by their units
+         "$$"]  # Display the settings
+         # "$$",  # Display the settings
+         # "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
+         # "X0 Y-180"]  # Because of G01, this should move X and Y by their units
 
 # These do different things according to what is commented out
 # scalar = 8
@@ -58,13 +59,26 @@ lines = ["G21",  # Program coordinates are in mm
 #     # lines += ["G01 F{0:.1f}".format(speed), "X{} Y0".format(scalar)]
 #     lines += ["X{} Y0".format(scalar)]
 
-# These do different things according to what is commented out
-#### for i in range(1000):
-####     v = float(i) / 50
-####     lines.append("X{0:.2f} Y{1:.2f}".format(1 - v, v))
-####     v = 250 + (i + 1) * 0.1
-####     lines.append("G01 F{}".format(v))
-####     lines.append("X0.1 Y0")
+## These do different things according to what is commented out
+maxX = 720
+X = range(0, maxX, 1)
+for i in X:
+    # Version 1: Leave the speed constant and do a 90 degree turn
+    # v = float(i) / 50
+    # lines.append("X{0:.2f} Y{1:.2f}".format((maxX / 50.0) - v, v))
+    # Version 2: Leave the step constant and sweep the speed from 250 to 350
+    # v = 250 + (i + 1) * 0.1
+    # lines.append("G01 F{}".format(v))
+    # lines.append("X0.1 Y0")
+    # Version 3: Do a sine wave with a normalized vector
+    radians = i * np.pi / 180.0
+    xStep = np.cos(radians)
+    scalar = 2 / 8.0
+    # We want to always step a constant Y value
+    lines.append("X{0:.2f} Y{1:.2f}".format(xStep * scalar, 0.25))
+
+# import ipdb
+# ipdb.set_trace()
 
 # Stream g-code to grbl
 for line in lines:
