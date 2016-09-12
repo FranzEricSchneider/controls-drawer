@@ -1,0 +1,6 @@
+package lcmtypes;
+struct lcm_velocity_t
+{
+    double command_v_mps;
+    double position_m[2];
+}
