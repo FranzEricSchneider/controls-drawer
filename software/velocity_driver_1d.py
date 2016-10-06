@@ -3,7 +3,6 @@
 import numpy as np
 import select
 import serial
-import signal
 import time
 
 import lcm
@@ -11,6 +10,9 @@ import lcm
 from lcmtypes import lcm_velocity_t
 
 
+DEBUG_HANDLE = True
+DEBUG_RUNNINGCYCLE = True
+DEBUG_SENDLINES = False
 Y_V_LIMIT_MPS = 0.01  # In m/s (600 mm/min)
 
 
@@ -55,38 +57,49 @@ class VelocityDriver1D():
         # Each time we call startRunning, set running to True for the while
         #   loop and False after that
         self.running = True
-        timeLastSent = 0
+        timeLastSent = time.time()
         xPositionAtLastSend = self.xPosition
         yPositionAtLastSend = self.yPosition
+        sentXVelocity = 0.0
+        sentYVelocity = 0.0
         yStep = 0.0
+        firstLoopMsg = True
 
         while self.xPosition <= self.xLimit and self.running:
-            if time.time() > (timeLastSent + self.timeStep):
+            if time.time() >= (timeLastSent + self.timeStep):
                 self.xPosition = xPositionAtLastSend + self.xStep
                 self.yPosition = yPositionAtLastSend + yStep
                 xPositionAtLastSend = self.xPosition
+                yPositionAtLastSend = self.yPosition
 
+                sentXVelocity = self.xVelocity
+                sentYVelocity = self.yVelocity
                 yStep = self.yVelocity * self.timeStep
                 vVector = np.array([self.xVelocity, self.yVelocity])
                 feedrateMPS = np.linalg.norm(vVector)
                 line = "X{} Y{} F{}".format(mToMM(self.xStep),
                                             mToMM(yStep),
                                             mpsToMMPMin(feedrateMPS))
-                print('Sending combined step command')
-                print('\tConstant xStep = {}m, yStep = {}m'.format(self.xStep, yStep))
-                print('\txPosition: {}'.format(self.xPosition))
+
+                if DEBUG_RUNNINGCYCLE:
+                    print('Sending combined step command')
+                    print('\tConstant xStep = {}m, yStep = {}m'.format(self.xStep, yStep))
+                    print('\txPosition: {}'.format(self.xPosition))
                 self.sendLines([line])
                 timeLastSent = time.time()
             else:
                 self.xPosition = xPositionAtLastSend + \
-                                 (time.time() - timeLastSent) * self.xVelocity
+                                 (time.time() - timeLastSent) * sentXVelocity
                 self.yPosition = yPositionAtLastSend + \
-                                 (time.time() - timeLastSent) * self.yVelocity
+                                 (time.time() - timeLastSent) * sentYVelocity
                 msg = lcm_velocity_t()
                 msg.utime = long(time.time() * 1e6)
                 msg.position_m[0] = self.xPosition
+                print("xPosition: {}".format(self.xPosition))
                 msg.position_m[1] = self.yPosition
+                msg.cycle_start = firstLoopMsg
                 self.lcmObj.publish("HEAD_POSITION", msg.encode())
+                firstLoopMsg = False
 
                 # Wait for timeout to handle lcmObj, otherwise just pass
                 rfds, wfds, efds = select.select([self.lcmObj.fileno()],
@@ -138,27 +151,33 @@ class VelocityDriver1D():
             else:
                 lineCorrected = lineStrip
 
-            print("Sending: " + lineCorrected)
+            if DEBUG_SENDLINES:
+                print("Sending: " + lineCorrected)
             # Send g-code block to grbl
             self.serialConnection.write(lineCorrected + "\n")
-            print("Sent!")
+            if DEBUG_SENDLINES:
+                print("Sent!")
 
             if lineCorrected == "$$":
                 for idx in range(31):
                     grbl_out = self.serialConnection.readline().strip()
-                    print("grbl_out: {}".format(grbl_out))
+                    if DEBUG_SENDLINES:
+                        print("grbl_out: {}".format(grbl_out))
             else:
                 # Wait for grbl response with carriage return
                 grbl_out = self.serialConnection.readline(30)
-                print("grbl_out: {}".format(grbl_out))
+                if DEBUG_SENDLINES:
+                    print("grbl_out: {}".format(grbl_out))
 
     def handleCommands(self, channel, data):
         try:
             yCommand = lcm_velocity_t.decode(data).command_v_mps
-            if abs(yCommand) <= Y_V_LIMIT:
+            if abs(yCommand) <= Y_V_LIMIT_MPS:
                 self.yVelocity = yCommand
             else:
-                self.yVelocity = np.sign(yCommand) * Y_V_LIMIT
+                self.yVelocity = np.sign(yCommand) * Y_V_LIMIT_MPS
+            if DEBUG_HANDLE:
+                print("yVelocity: {}".format(self.yVelocity))
         except:
             self.cleanUp(giveRetreatOption=False)
             raise
