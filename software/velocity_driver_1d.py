@@ -82,6 +82,11 @@ class VelocityDriver1D():
                                  (time.time() - timeLastSent) * self.xVelocity
                 self.yPosition = yPositionAtLastSend + \
                                  (time.time() - timeLastSent) * self.yVelocity
+                msg = lcm_velocity_t()
+                msg.utime = long(time.time() * 1e6)
+                msg.position_m[0] = self.xPosition
+                msg.position_m[1] = self.yPosition
+                self.lcmObj.publish("HEAD_POSITION", msg.encode())
 
                 # Wait for timeout to handle lcmObj, otherwise just pass
                 rfds, wfds, efds = select.select([self.lcmObj.fileno()],

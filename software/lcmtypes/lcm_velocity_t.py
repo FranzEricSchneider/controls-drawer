@@ -10,11 +10,12 @@ except ImportError:
 import struct
 
 class lcm_velocity_t(object):
-    __slots__ = ["command", "position"]
+    __slots__ = ["utime", "command_v_mps", "position_m"]
 
     def __init__(self):
-        self.command = 0.0
-        self.position = [ 0.0 for dim0 in range(2) ]
+        self.utime = 0
+        self.command_v_mps = 0.0
+        self.position_m = [ 0.0 for dim0 in range(2) ]
 
     def encode(self):
         buf = BytesIO()
@@ -23,8 +24,8 @@ class lcm_velocity_t(object):
         return buf.getvalue()
 
     def _encode_one(self, buf):
-        buf.write(struct.pack(">d", self.command))
-        buf.write(struct.pack('>2d', *self.position[:2]))
+        buf.write(struct.pack(">qd", self.utime, self.command_v_mps))
+        buf.write(struct.pack('>2d', *self.position_m[:2]))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -38,15 +39,15 @@ class lcm_velocity_t(object):
 
     def _decode_one(buf):
         self = lcm_velocity_t()
-        self.command = struct.unpack(">d", buf.read(8))[0]
-        self.position = struct.unpack('>2d', buf.read(16))
+        self.utime, self.command_v_mps = struct.unpack(">qd", buf.read(16))
+        self.position_m = struct.unpack('>2d', buf.read(16))
         return self
     _decode_one = staticmethod(_decode_one)
 
     _hash = None
     def _get_hash_recursive(parents):
         if lcm_velocity_t in parents: return 0
-        tmphash = (0xcfefdf1dee276762) & 0xffffffffffffffff
+        tmphash = (0xa306b374903e49f) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)
