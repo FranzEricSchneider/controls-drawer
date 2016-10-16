@@ -67,19 +67,22 @@ class VelocityDriver1D():
 
         while self.xPosition <= self.xLimit and self.running:
             if time.time() >= (timeLastSent + self.timeStep):
-                self.xPosition = xPositionAtLastSend + self.xStep
-                self.yPosition = yPositionAtLastSend + yStep
-                xPositionAtLastSend = self.xPosition
-                yPositionAtLastSend = self.yPosition
 
-                sentXVelocity = self.xVelocity
-                sentYVelocity = self.yVelocity
                 yStep = self.yVelocity * self.timeStep
                 vVector = np.array([self.xVelocity, self.yVelocity])
                 feedrateMPS = np.linalg.norm(vVector)
                 line = "X{} Y{} F{}".format(mToMM(self.xStep),
                                             mToMM(yStep),
                                             mpsToMMPMin(feedrateMPS))
+                
+                # Do the bookkeeping - record what the current position is and
+                #   what the last sent velocity was
+                self.xPosition = xPositionAtLastSend + self.xStep
+                self.yPosition = yPositionAtLastSend + yStep
+                xPositionAtLastSend = self.xPosition
+                yPositionAtLastSend = self.yPosition
+                sentXVelocity = self.xVelocity
+                sentYVelocity = self.yVelocity
 
                 if DEBUG_RUNNINGCYCLE:
                     print('Sending combined step command')
@@ -95,7 +98,6 @@ class VelocityDriver1D():
                 msg = lcm_velocity_t()
                 msg.utime = long(time.time() * 1e6)
                 msg.position_m[0] = self.xPosition
-                print("xPosition: {}".format(self.xPosition))
                 msg.position_m[1] = self.yPosition
                 msg.cycle_start = firstLoopMsg
                 self.lcmObj.publish("HEAD_POSITION", msg.encode())
@@ -143,7 +145,7 @@ class VelocityDriver1D():
         # Stream g-code to grbl
         for line in lines:
             lineStrip = line.strip() # Strip all EOL characters for consistency
-            if 'X' in lineStrip.upper() and 'Y' in lineStrip.upper():
+            if 'x' in lineStrip.lower() and 'y' in lineStrip.lower():
                 # For now, I'm referring to X and Y swapped from what the XPro
                 #   thinks of it as. This corrects that if we are sending
                 #   strings like "X10 Y20 F1500s"
