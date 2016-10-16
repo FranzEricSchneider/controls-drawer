@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import numpy as np
 import select
 import serial
@@ -10,7 +11,7 @@ import lcm
 from lcmtypes import lcm_velocity_t
 
 
-DEBUG_HANDLE = True
+DEBUG_HANDLE = False
 DEBUG_RUNNINGCYCLE = True
 DEBUG_SENDLINES = False
 Y_V_LIMIT_MPS = 0.01  # In m/s (600 mm/min)
@@ -87,7 +88,7 @@ class VelocityDriver1D():
                 if DEBUG_RUNNINGCYCLE:
                     print('Sending combined step command')
                     print('\tConstant xStep = {}m, yStep = {}m'.format(self.xStep, yStep))
-                    print('\txPosition: {}'.format(self.xPosition))
+                    print('\txPosition: {}, yPosition: {}'.format(self.xPosition, self.yPosition))
                 self.sendLines([line])
                 timeLastSent = time.time()
             else:
@@ -110,7 +111,7 @@ class VelocityDriver1D():
                     self.lcmObj.handle()
             time.sleep(0.001)
 
-        print("Out of the loop! Cleaning up...")
+        print("Out of the main loop! Cleaning up...")
         self.running = False
         self.cleanUp(giveRetreatOption=True)
 
@@ -121,16 +122,26 @@ class VelocityDriver1D():
         if giveRetreatOption:
             # Wait here until grbl is finished to close serial port and file.
             shouldRetreat = raw_input("Program done. Do you want to retreat" +\
-                                      " to the starting position? (y/n)")
-            if shouldRetreat.lower() == 'y':
+                                      " to the starting position? ([y]/n)")
+            if shouldRetreat.lower() != 'n':
                 retreatCorrect = raw_input("It looks like the head has moved" +\
                                            " ({}, {})m".format(self.xPosition,
                                                                self.yPosition) +\
-                                           " from the beginning, undo? (y/n)")
-                if retreatCorrect.lower() == 'y':
-                    lines = ["X{} Y{}".format(int(-self.xPosition),
-                                              int(-self.yPosition))]
+                                           " from the beginning, undo? ([y]/n)")
+                if retreatCorrect.lower() != 'n':
+                    retreatSpeed = 0.025  # m/s (1500 mm/min)
+                    sleepTime = np.ceil(
+                        np.linalg.norm(
+                            np.array([self.xPosition, self.yPosition])
+                        ) / retreatSpeed
+                    ) + 1.0
+                    lines = ["X{} Y{} F{}".format(-mToMM(self.xPosition),
+                                                  -mToMM(self.yPosition),
+                                                  mpsToMMPMin(retreatSpeed))]
                     self.sendLines(lines)
+                    print("Sleeping for {} seconds for move to complete...".format(sleepTime))
+                    time.sleep(sleepTime)
+                    print("Continuing")
             print("Quitting")
         else:
             print("Instructed not to retreat, quitting")
@@ -195,7 +206,7 @@ def swapXandY(line):
 
 def mToMM(value):
     ''' Converts values in m (float) to mm (int). Works for m and m/s '''
-    return int(round(value * 1e3))
+    return value * 1e3
 
 
 def mmToM(value):
@@ -205,4 +216,25 @@ def mmToM(value):
 
 def mpsToMMPMin(value):
     ''' Converts values in m/s (float) to mm/min (int) '''
-    return int(round(value * 1e3 * 60))
+    return value * 1e3 * 60
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Starts a 1D velocity driver",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-t", "--timestep-s",
+                        help="Respond to position data every -t seconds",
+                        type=float,
+                        default=0.05)
+    parser.add_argument("-v", "--x-velocity",
+                        help="Velocity (mps) at which x axis should travel",
+                        type=float,
+                        default=0.01)  # Equivalent to 600 mm/min
+    parser.add_argument("-x", "--x-limit",
+                        help="Distance (m) at which the run should stop",
+                        type=float,
+                        default=0.1)
+    args = parser.parse_args()
+
+    VD1D = VelocityDriver1D(args.timestep_s, args.x_velocity, args.x_limit)
+    VD1D.startRunning()

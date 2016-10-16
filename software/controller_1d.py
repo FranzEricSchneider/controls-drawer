@@ -14,9 +14,9 @@ from lcmtypes import lcm_velocity_t
 
 DEBUG_HANDLE = False
 
-CONSTANT_FN_VALUE_M = 0.01
+CONSTANT_FN_VALUE_M = 0.05
 
-SINE_FREQ_RPS = np.pi / 2  # /2pi = cycles per second (1/4 cycle per second)
+SINE_FREQ_RPS = np.pi / 8  # /2pi = cycles per second (1/16 cycle per second)
 SINE_AMPLITUDE_M = 0.02
 SINE_OFFSET_M = 0.0
 SINE_ANGULAR_OFFSET_R = np.pi
@@ -35,8 +35,10 @@ class Controller1D():
                                                   self.positionHandler)
         self.cycleStartUtime = long(0)
         self.timeLastSent = time.time()
-        self.plotX = []
-        self.plotY = []
+        self.plotX1 = []
+        self.plotY1 = []
+        self.plotX2 = []
+        self.plotY2 = []
 
         try:
            while True:
@@ -48,7 +50,8 @@ class Controller1D():
                     raise
         except KeyboardInterrupt:
             import matplotlib.pyplot as plt
-            plt.plot(self.plotX, self.plotY, '.-')
+            plt.plot(self.plotX1, self.plotY1, 'b.-')
+            plt.plot(self.plotX2, self.plotY2, 'r.-')
             plt.show()
 
     def positionHandler(self, channel, data):
@@ -64,6 +67,8 @@ class Controller1D():
             sendMsg.command_v_mps = vCommand
             self.lcmObj.publish("V_COMMAND", sendMsg.encode())
             self.timeLastSent = time.time()
+            self.plotX2.append(usToS(rcvMsg.utime))
+            self.plotY2.append(referencePoint)
 
         if DEBUG_HANDLE:
             print("Received message on channel \"%s\"" % channel)
@@ -71,8 +76,8 @@ class Controller1D():
             print("\tcommand_v_mps = %s" % str(rcvMsg.command_v_mps))
             print("\tposition      = %s" % str(rcvMsg.position_m))
             print("\tcycle_start   = %s" % str(rcvMsg.cycle_start))
-        self.plotX.append(usToS(rcvMsg.utime))
-        self.plotY.append(rcvMsg.position_m[1])
+        self.plotX1.append(usToS(rcvMsg.utime))
+        self.plotY1.append(rcvMsg.position_m[1])
 
 
 def constantFn(dUT):

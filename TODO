@@ -1,0 +1,10 @@
+TODO:
+
+So. If you run the sine/proportional controller you can get nice graphs with
+amplitude/phase offsets calculatable. I think this is a good time to step back
+and review what the controls system actually is. Is it a one pole system? I
+think so, because it is a velocity control problem. Calculate what the system
+is and then calculate the constants. What role does Y_V_LIMIT_MPS play? Also,
+what happens if the x velocity is slowed down?
+
+After that, start playing with some basic controls things other than proportional
