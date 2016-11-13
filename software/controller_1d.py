@@ -17,11 +17,22 @@ DEBUG_HANDLE = False
 CONSTANT_FN_VALUE_M = 0.05
 
 SINE_FREQ_RPS = np.pi / 8  # /2pi = cycles per second (1/16 cycle per second)
-SINE_AMPLITUDE_M = 0.02
+SINE_AMPLITUDE_M = 0.01
 SINE_OFFSET_M = 0.0
 SINE_ANGULAR_OFFSET_R = np.pi
 
-P_CONSTANT = 0.5  # 1cm offset results in reaction of 0.005 m/s, 300 mm/min
+SAWTOOTH_SLOPE = 0.002
+SAWTOOTH_Y_LIMIT_M = 0.03
+
+SQUARE_WIDTH_S = 3
+SQUARE_HEIGHT_M = 0.02
+
+# It's wierd. The x axis is measured in time and the y axis in meters
+CIRCLE_RADIUS_S = 3.0
+CIRCLE_RADIUS_M = 0.005
+CIRCLE_INVERT = True
+
+P_CONSTANT = 2.5  # 1cm offset results in reaction of 0.005 m/s, 300 mm/min
 
 
 class Controller1D():
@@ -97,6 +108,41 @@ def sineFn(dUT):
     return (np.sin((SINE_FREQ_RPS * t) + SINE_ANGULAR_OFFSET_R) * SINE_AMPLITUDE_M) + SINE_OFFSET_M
 
 
+def sawtoothFn(dUT):
+    '''
+    input (dUT): delta utime from the start of the system
+    returns: referencePoint of the system in meters
+    '''
+    t = usToS(dUT)
+    return (SAWTOOTH_SLOPE * t) % SAWTOOTH_Y_LIMIT_M
+
+
+def squareFn(dUT):
+    '''
+    input (dUT): delta utime from the start of the system
+    returns: referencePoint of the system in meters
+    '''
+    t = usToS(dUT)
+    return (((t / SQUARE_WIDTH_S) % 2) > 1) * SQUARE_HEIGHT_M
+
+
+def circleFn(dUT):
+    '''
+    input (dUT): delta utime from the start of the system
+    returns: referencePoint of the system in meters
+    ellipse equation = x^2/x_rad^2 + y^2/y_rad^2 = 1
+    y = sqrt((1 - x^2/x_rad^2) * y_rad^2)
+    '''
+    t = usToS(dUT)
+    x = (t % (2 * CIRCLE_RADIUS_S)) - CIRCLE_RADIUS_S
+    y = np.sqrt((1 - (pow(x, 2) / pow(CIRCLE_RADIUS_S, 2))) * pow(CIRCLE_RADIUS_M, 2))
+    invert = ((((t / (2 * CIRCLE_RADIUS_S)) % 2) > 1) * 2 - 1)
+    if CIRCLE_INVERT:
+        return y * invert
+    else:
+        return y
+
+
 def pCtrlr(eM):
     '''
     input (eM): error in meters
@@ -131,6 +177,12 @@ if __name__ == "__main__":
         referencePointFn = constantFn
     elif args.reference_point_function == "sine":
         referencePointFn = sineFn
+    elif args.reference_point_function == "saw":
+        referencePointFn = sawtoothFn
+    elif args.reference_point_function == "square":
+        referencePointFn = squareFn
+    elif args.reference_point_function == "circle":
+        referencePointFn = circleFn
     else:
         raise ValueError("Didn't recognize referencePointFn {}".format(args.reference_point_function))
 
