@@ -27,7 +27,7 @@ print("time: {}, freq: {}".format(meanTime, 1 / meanTime))
 #	(1280, 720), (864, 480), (640, 480), (640, 360), (176, 144)
 print("width: {}".format(cap.get(3)))
 print("height: {}".format(cap.get(4)))
-# The max value is 30, you set FPS values lower than 30 (rounds to nearest 5)
+# The max value is 30, you set FPS values lower than 30 (rounds to nearest ~5)
 print("FPS: {}".format(cap.get(5)))
 # The brightness was naturally around 0.5, and can be adjusted up and down to
 # 	make the image brighter/darker. It's interesting because the camera will

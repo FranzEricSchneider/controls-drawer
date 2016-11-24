@@ -1,0 +1,22 @@
+package lcmtypes;
+
+struct image_request_t {
+  // timestamp
+  int64_t utime;
+
+  // A dict of arguments that specify operations (RGB > BW, crop, etc) in an
+  //  operations layer
+  int8_t n_arguments;
+  string arg_names[n_arguments];
+  string arg_values[n_arguments];
+
+  // Unique identifier for connected actions
+  int64_t action_id;
+
+  // Name of the caller
+  string name;
+
+  // Pass the final destination along so that the operations layers can
+  //  re-publish it on the correct channel
+  string dest_channel;
+}
