@@ -74,8 +74,8 @@ class CameraDriver():
         outMsg.brightness = self.brightness
         outMsg.contrast = self.contrast
         # Write the image data
-        outMsg.num_data = np.product(frame.shape)
-        outMsg.data = frame.flatten()
+        outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
+        outMsg.num_data = len(outMsg.data)
         # Publish the raw image!
         self.lcmObj.publish(self.outputChannel, outMsg.encode())
 
