@@ -12,11 +12,7 @@ import struct
 import lcmtypes.image_request_t
 
 class image_t(object):
-    __slots__ = ["utime", "action_id", "request", "width", "height", "row_length", "FPS", "brightness", "contrast", "num_data", "data", "format"]
-
-    FORMAT_RGB = 1
-    FORMAT_GRAY8 = 2
-    FORMAT_GRAY16 = 3
+    __slots__ = ["utime", "action_id", "request", "width", "height", "row_stride", "FPS", "brightness", "contrast", "num_data", "data"]
 
     def __init__(self):
         self.utime = 0
@@ -24,13 +20,12 @@ class image_t(object):
         self.request = lcmtypes.image_request_t()
         self.width = 0
         self.height = 0
-        self.row_length = 0
+        self.row_stride = 0
         self.FPS = 0
         self.brightness = 0.0
         self.contrast = 0.0
         self.num_data = 0
-        self.data = ""
-        self.format = 0
+        self.data = []
 
     def encode(self):
         buf = BytesIO()
@@ -42,9 +37,8 @@ class image_t(object):
         buf.write(struct.pack(">qq", self.utime, self.action_id))
         assert self.request._get_packed_fingerprint() == lcmtypes.image_request_t._get_packed_fingerprint()
         self.request._encode_one(buf)
-        buf.write(struct.pack(">hhhhffi", self.width, self.height, self.row_length, self.FPS, self.brightness, self.contrast, self.num_data))
-        buf.write(bytearray(self.data[:self.num_data]))
-        buf.write(struct.pack(">b", self.format))
+        buf.write(struct.pack(">hhhhffi", self.width, self.height, self.row_stride, self.FPS, self.brightness, self.contrast, self.num_data))
+        buf.write(struct.pack('>%dh' % self.num_data, *self.data[:self.num_data]))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -60,9 +54,8 @@ class image_t(object):
         self = image_t()
         self.utime, self.action_id = struct.unpack(">qq", buf.read(16))
         self.request = lcmtypes.image_request_t._decode_one(buf)
-        self.width, self.height, self.row_length, self.FPS, self.brightness, self.contrast, self.num_data = struct.unpack(">hhhhffi", buf.read(20))
-        self.data = buf.read(self.num_data)
-        self.format = struct.unpack(">b", buf.read(1))[0]
+        self.width, self.height, self.row_stride, self.FPS, self.brightness, self.contrast, self.num_data = struct.unpack(">hhhhffi", buf.read(20))
+        self.data = struct.unpack('>%dh' % self.num_data, buf.read(self.num_data * 2))
         return self
     _decode_one = staticmethod(_decode_one)
 
@@ -70,7 +63,7 @@ class image_t(object):
     def _get_hash_recursive(parents):
         if image_t in parents: return 0
         newparents = parents + [image_t]
-        tmphash = (0x1596b86f2abc141f+ lcmtypes.image_request_t._get_hash_recursive(newparents)) & 0xffffffffffffffff
+        tmphash = (0x5a5c6336cf623e9+ lcmtypes.image_request_t._get_hash_recursive(newparents)) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

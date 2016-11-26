@@ -10,14 +10,18 @@ except ImportError:
 import struct
 
 class image_request_t(object):
-    __slots__ = ["utime", "n_arguments", "arg_names", "arg_values", "action_id", "name", "dest_channel"]
+    __slots__ = ["utime", "action_id", "format", "n_arguments", "arg_names", "arg_values", "name", "dest_channel"]
+
+    FORMAT_BGR = 1
+    FORMAT_GRAY = 2
 
     def __init__(self):
         self.utime = 0
+        self.action_id = 0
+        self.format = 0
         self.n_arguments = 0
         self.arg_names = []
         self.arg_values = []
-        self.action_id = 0
         self.name = ""
         self.dest_channel = ""
 
@@ -28,7 +32,7 @@ class image_request_t(object):
         return buf.getvalue()
 
     def _encode_one(self, buf):
-        buf.write(struct.pack(">qb", self.utime, self.n_arguments))
+        buf.write(struct.pack(">qqbb", self.utime, self.action_id, self.format, self.n_arguments))
         for i0 in range(self.n_arguments):
             __arg_names_encoded = self.arg_names[i0].encode('utf-8')
             buf.write(struct.pack('>I', len(__arg_names_encoded)+1))
@@ -39,7 +43,6 @@ class image_request_t(object):
             buf.write(struct.pack('>I', len(__arg_values_encoded)+1))
             buf.write(__arg_values_encoded)
             buf.write(b"\0")
-        buf.write(struct.pack(">q", self.action_id))
         __name_encoded = self.name.encode('utf-8')
         buf.write(struct.pack('>I', len(__name_encoded)+1))
         buf.write(__name_encoded)
@@ -61,7 +64,7 @@ class image_request_t(object):
 
     def _decode_one(buf):
         self = image_request_t()
-        self.utime, self.n_arguments = struct.unpack(">qb", buf.read(9))
+        self.utime, self.action_id, self.format, self.n_arguments = struct.unpack(">qqbb", buf.read(18))
         self.arg_names = []
         for i0 in range(self.n_arguments):
             __arg_names_len = struct.unpack('>I', buf.read(4))[0]
@@ -70,7 +73,6 @@ class image_request_t(object):
         for i0 in range(self.n_arguments):
             __arg_values_len = struct.unpack('>I', buf.read(4))[0]
             self.arg_values.append(buf.read(__arg_values_len)[:-1].decode('utf-8', 'replace'))
-        self.action_id = struct.unpack(">q", buf.read(8))[0]
         __name_len = struct.unpack('>I', buf.read(4))[0]
         self.name = buf.read(__name_len)[:-1].decode('utf-8', 'replace')
         __dest_channel_len = struct.unpack('>I', buf.read(4))[0]
@@ -81,7 +83,7 @@ class image_request_t(object):
     _hash = None
     def _get_hash_recursive(parents):
         if image_request_t in parents: return 0
-        tmphash = (0x75722daee6cb304f) & 0xffffffffffffffff
+        tmphash = (0x684a0c37e134d84e) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

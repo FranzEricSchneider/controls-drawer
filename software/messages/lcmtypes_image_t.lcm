@@ -14,7 +14,8 @@ struct image_t {
   // Image size and row length (pixels)
   int16_t width;
   int16_t height;
-  int16_t row_length;
+  // Size of a row in bytes (width * pixel size in bytes)
+  int16_t row_stride;
 
   // Image settings, which are important will be different by camera
   int16_t FPS;
@@ -23,12 +24,5 @@ struct image_t {
 
   // Image data
   int32_t num_data;
-  byte data[num_data];
-
-  // Different formats for passing the image
-  int8_t format;
-  // Constants to define formats
-  const int8_t FORMAT_RGB     = 1;
-  const int8_t FORMAT_GRAY8   = 2;
-  const int8_t FORMAT_GRAY16  = 3;
+  int16_t data[num_data];
 }

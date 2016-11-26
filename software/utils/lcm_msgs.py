@@ -1,7 +1,10 @@
+import time
+
 import lcmtypes
 
+
 KNOWN_MESSAGES = {
-	'RAW_IMAGE_REQUEST' : lcmtypes.image_request_t,
+	'REQUEST_IMAGE' : lcmtypes.image_request_t,
 	'IMAGE_RAW' : lcmtypes.image_t
 }
 
@@ -10,3 +13,6 @@ def auto_decode(channel, data):
 
 def auto_instantiate(channel):
     return KNOWN_MESSAGES[channel]()
+
+def utime_now():
+	return long(time.time() * 1e6)
