@@ -68,19 +68,18 @@ def sendLines(serialConnection, lines, debug=False):
 
 
 def retreat(offerRetreat, serialConnection, position):
-    xPos = position[0]
-    yPos = position[1]
+    position = np.array(position)
     if offerRetreat:
         # Wait here until grbl is finished to close serial port and file.
         shouldRetreat = raw_input("Program done. Do you want to retreat" +\
                                   " to the starting position? ([y]/n)")
         if shouldRetreat.lower() != 'n':
             retreatCorrect = raw_input("It looks like the head has moved"
-                                       " ({}, {})m from the beginning, undo?"
-                                       " ([y]/n)".format(xPos, yPos))
+                                       " {} m from the beginning, undo?"
+                                       " ([y]/n)".format(position))
             if retreatCorrect.lower() != 'n':
                 retreatSpeed = 0.025  # m/s (1500 mm/min)
-                sleepTime = np.linalg.norm(np.array([xPos, yPos])) / retreatSpeed + 1.5
+                sleepTime = np.linalg.norm(position) / retreatSpeed + 1.5
                 line = makeCmd(xPos, yPos, retreatSpeed)
                 sendLines(serialConnection, [line], DEBUG_SENDLINES)
                 print("Sleeping for {} seconds to move...".format(sleepTime))

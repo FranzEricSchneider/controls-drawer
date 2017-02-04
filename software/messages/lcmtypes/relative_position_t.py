@@ -10,12 +10,12 @@ except ImportError:
 import struct
 
 class relative_position_t(object):
-    __slots__ = ["utime", "command_v_mps", "relative_position_m"]
+    __slots__ = ["utime", "velocity", "position"]
 
     def __init__(self):
         self.utime = 0
-        self.command_v_mps = 0.0
-        self.relative_position_m = [ 0.0 for dim0 in range(2) ]
+        self.velocity = 0.0
+        self.position = [ 0.0 for dim0 in range(2) ]
 
     def encode(self):
         buf = BytesIO()
@@ -24,8 +24,8 @@ class relative_position_t(object):
         return buf.getvalue()
 
     def _encode_one(self, buf):
-        buf.write(struct.pack(">qd", self.utime, self.command_v_mps))
-        buf.write(struct.pack('>2d', *self.relative_position_m[:2]))
+        buf.write(struct.pack(">qd", self.utime, self.velocity))
+        buf.write(struct.pack('>2d', *self.position[:2]))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -39,15 +39,15 @@ class relative_position_t(object):
 
     def _decode_one(buf):
         self = relative_position_t()
-        self.utime, self.command_v_mps = struct.unpack(">qd", buf.read(16))
-        self.relative_position_m = struct.unpack('>2d', buf.read(16))
+        self.utime, self.velocity = struct.unpack(">qd", buf.read(16))
+        self.position = struct.unpack('>2d', buf.read(16))
         return self
     _decode_one = staticmethod(_decode_one)
 
     _hash = None
     def _get_hash_recursive(parents):
         if relative_position_t in parents: return 0
-        tmphash = (0x3b6444d04cc37626) & 0xffffffffffffffff
+        tmphash = (0xbceca6b30e5916eb) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

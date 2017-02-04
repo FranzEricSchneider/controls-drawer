@@ -2,6 +2,6 @@ package lcmtypes;
 struct relative_position_t
 {
 	int64_t utime;
-    double command_v_mps;
-    double relative_position_m[2];
+    double velocity;  // meters per second
+    double position[2];  // meters
 }

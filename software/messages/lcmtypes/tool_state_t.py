@@ -10,11 +10,11 @@ except ImportError:
 import struct
 
 class tool_state_t(object):
-    __slots__ = ["utime", "position_m", "cycle_start"]
+    __slots__ = ["utime", "position", "cycle_start"]
 
     def __init__(self):
         self.utime = 0
-        self.position_m = [ 0.0 for dim0 in range(2) ]
+        self.position = [ 0.0 for dim0 in range(2) ]
         self.cycle_start = False
 
     def encode(self):
@@ -25,7 +25,7 @@ class tool_state_t(object):
 
     def _encode_one(self, buf):
         buf.write(struct.pack(">q", self.utime))
-        buf.write(struct.pack('>2d', *self.position_m[:2]))
+        buf.write(struct.pack('>2d', *self.position[:2]))
         buf.write(struct.pack(">b", self.cycle_start))
 
     def decode(data):
@@ -41,7 +41,7 @@ class tool_state_t(object):
     def _decode_one(buf):
         self = tool_state_t()
         self.utime = struct.unpack(">q", buf.read(8))[0]
-        self.position_m = struct.unpack('>2d', buf.read(16))
+        self.position = struct.unpack('>2d', buf.read(16))
         self.cycle_start = bool(struct.unpack('b', buf.read(1))[0])
         return self
     _decode_one = staticmethod(_decode_one)
@@ -49,7 +49,7 @@ class tool_state_t(object):
     _hash = None
     def _get_hash_recursive(parents):
         if tool_state_t in parents: return 0
-        tmphash = (0x20b0827b75d583c7) & 0xffffffffffffffff
+        tmphash = (0xc721caaa357bdc0d) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

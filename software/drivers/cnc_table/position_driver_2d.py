@@ -28,54 +28,50 @@ class positionDriver2D():
         self.inMessages = []
         self.sentMessages = []
 
+        # Set up LCM objects
         self.lcmObj = lcm.LCM()
         self.inputChannel = "POSITION_COMMAND"
         self.outputChannel = "TOOL_STATE"
-        self.subscription = self.lcmObj.subscribe(self.inputChannel,
-                                                  self.handleCommands)
+        self.sub = self.lcmObj.subscribe(self.inputChannel, self.handleCommands)
 
         # Open grbl serial port
-        self.serialConnection = serial.Serial("/dev/ttyUSB0", 115200)
+        self.serial = serial.Serial("/dev/ttyUSB0", 115200)
 
         # Wake up grbl (includes a sleep for several seconds)
-        grbl_tools.openSerial(self.serialConnection)
+        grbl_tools.openSerial(self.serial)
 
         # Set up the table with the normal settings (mm/min, relative
         #   positioning, etc.)
         lines = grbl_tools.setupBasicSystem()
-        grbl_tools.sendLines(self.serialConnection, lines, DEBUG_SENDLINES)
+        grbl_tools.sendLines(self.serial, lines, DEBUG_SENDLINES)
 
     def startRunning(self):
         '''
         Starts the event loop that handles incoming commands and takes position
         steps at the appropriate timesteps
         '''
+
         # Each time we call startRunning, set running to True for the while
         #   loop and False after that
         self.running = True
         timeLastSent = time.time()
         vectorLastSent = np.array([0.0, 0.0])
-        # sentXVelocity = 0.0
-        # sentYVelocity = 0.0
         firstLoopMsg = True
 
         while self.running:
             # Update estimation of state
             now = time.time()
-            positionCmds = np.array([cmd.relative_position_m
-                                     for cmd in self.sentMessages])
+            positionCmds = np.array([cmd.position for cmd in self.sentMessages])
             # If we have sent commands W, X, Y, Z, this computes the tool
             #   position at the end of command Y. Theoretically, command Z is
             #   happening right now
             lastCmdPosition = np.sum(positionCmds[:-1], axis=0)
-            distTravelled = (now - timeLastSent) * self.sentMessages[-1].command_v_mps
+            distTravelled = (now - timeLastSent) * self.sentMessages[-1].velocity
             self.position = lastCmdPosition + vectorLastSent * distTravelled
 
             # Send out state
             stateMsg = lcm_msgs.auto_instantiate(self.outputChannel)
-            stateMsg.utime = lcm_msgs.utime_now()
-            stateMsg.position_m[0] = self.position[0]
-            stateMsg.position_m[1] = self.position[1]
+            stateMsg.position = list(self.position)
             stateMsg.cycle_start = firstLoopMsg
             firstLoopMsg = False
             self.lcmObj.publish(self.outputChannel, stateMsg.encode())
@@ -83,17 +79,20 @@ class positionDriver2D():
             # Send out a new command if it is relevant
             try:
                 now = time.time()
-                distanceToTravel = np.linalg.norm(self.sentMessages[-1].relative_position_m)
-                timeToTravel = distanceToTravel / self.sentMessages[-1].command_v_mps
+                distanceToTravel = np.linalg.norm(self.sentMessages[-1].position)
+                timeToTravel = distanceToTravel / self.sentMessages[-1].velocity
                 if now >= (timeLastSent + timeToTravel):
-                    line = grbl_tools.makeCmd(self.inMessages[0].relative_position_m[0],
-                                              self.inMessages[0].relative_position_m[1],
-                                              self.inMessages[0].command_v_mps)
-                    grbl_tools.sendLines(self.serialConnection, [line], DEBUG_SENDLINES)
+                    line = grbl_tools.makeCmd(self.inMessages[0].position[0],
+                                              self.inMessages[0].position[1],
+                                              self.inMessages[0].velocity)
+                    grbl_tools.sendLines(self.serial, [line], DEBUG_SENDLINES)
                     self.sentMessages.append(self.inMessages.pop(0))
+
+                    # For bookkeeping, keep the time and the unit vector of the
+                    #   last sent position command
                     timeLastSent = now
-                    vectorLastSent = np.array(self.sentMessages[-1].relative_position_m) /\
-                                     np.linalg.norm(self.sentMessages[-1].relative_position_m)
+                    vectorLastSent = np.array(self.sentMessages[-1].position)
+                    vectorLastSent /= vectorLastSent
             except IndexError:
                 # An array hasn't been populated yet
                 pass
@@ -116,11 +115,11 @@ class positionDriver2D():
         """
         try:
             msg = lcm_msgs.auto_decode(channel, data)
-            msg.command_v_mps = max(min(msg.command_v_mps, self.velocityLimit), 0.0)
+            msg.velocity = max(min(msg.velocity, self.velocityLimit), 0.0)
             if DEBUG_HANDLE:
                 print("Received msg:\n\tutime: {}\n\tvelocity: {}\n\tposition: "
-                      "".format(msg.utime, msg.command_v_mps, msg.relative_position_m))
-            self.inMessages.append(msg)
+                      "".format(msg.utime, msg.velocity, msg.position))
+         inMessages.append(msg)
         except:
             self.cleanUp(offerRetreat=False)
             raise
@@ -128,13 +127,13 @@ class positionDriver2D():
     def cleanUp(self, offerRetreat=True):
         # Send a halt message
         self.running = False
-        grbl_tools.sendLines(self.serialConnection, grbl_tools.haltMessage(), DEBUG_SENDLINES)
+        grbl_tools.sendLines(self.serial, grbl_tools.haltMessage(), DEBUG_SENDLINES)
 
         # Retreat the head to the starting position if commanded
-        grbl_tools.retreat(offerRetreat, self.serialConnection, self.position)
+        grbl_tools.retreat(offerRetreat, self.serial, self.position)
 
         # Close serial port to the CNC table
-        self.serialConnection.close()
+        self.serial.close()
 
 
 if __name__ == "__main__":

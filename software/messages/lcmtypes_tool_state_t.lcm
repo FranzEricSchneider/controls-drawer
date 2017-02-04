@@ -2,6 +2,6 @@ package lcmtypes;
 struct tool_state_t
 {
     int64_t utime;
-    double position_m[2];
+    double position[2];  // meters
     boolean cycle_start;
 }
