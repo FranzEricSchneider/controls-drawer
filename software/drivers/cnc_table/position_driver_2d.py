@@ -2,7 +2,6 @@
 
 import argparse
 import numpy as np
-import select
 import serial
 import time
 
@@ -59,28 +58,36 @@ class positionDriver2D():
         firstLoopMsg = True
 
         while self.running:
-            # Update estimation of state
             now = time.time()
-            positionCmds = np.array([cmd.position for cmd in self.sentMessages])
-            # If we have sent commands W, X, Y, Z, this computes the tool
-            #   position at the end of command Y. Theoretically, command Z is
-            #   happening right now
-            lastCmdPosition = np.sum(positionCmds[:-1], axis=0)
-            distTravelled = (now - timeLastSent) * self.sentMessages[-1].velocity
-            self.position = lastCmdPosition + vectorLastSent * distTravelled
 
-            # Send out state
-            stateMsg = lcm_msgs.auto_instantiate(self.outputChannel)
-            stateMsg.position = list(self.position)
-            stateMsg.cycle_start = firstLoopMsg
-            firstLoopMsg = False
-            self.lcmObj.publish(self.outputChannel, stateMsg.encode())
+            # Update estimation of state
+            try:
+                positionCmds = np.array([cmd.position for cmd in self.sentMessages])
+                # If we have sent commands W, X, Y, Z, this computes the tool
+                #   position at the end of command Y. Theoretically, command Z is
+                #   happening right now
+                lastCmdPosition = np.sum(positionCmds[:-1], axis=0)
+                distTravelled = (now - timeLastSent) * self.sentMessages[-1].velocity
+                self.position = lastCmdPosition + vectorLastSent * distTravelled
+
+                # Send out state
+                stateMsg = lcm_msgs.auto_instantiate(self.outputChannel)
+                stateMsg.position = list(self.position)
+                stateMsg.cycle_start = firstLoopMsg
+                firstLoopMsg = False
+                self.lcmObj.publish(self.outputChannel, stateMsg.encode())
+            except IndexError:
+                # An array hasn't been populated yet
+                pass
 
             # Send out a new command if it is relevant
-            try:
+            if len(self.sentMessages) > 0:
                 now = time.time()
                 distanceToTravel = np.linalg.norm(self.sentMessages[-1].position)
                 timeToTravel = distanceToTravel / self.sentMessages[-1].velocity
+            else:
+                timeToTravel = 0.0
+            try:
                 if now >= (timeLastSent + timeToTravel):
                     line = grbl_tools.makeCmd(self.inMessages[0].position[0],
                                               self.inMessages[0].position[1],
@@ -117,9 +124,9 @@ class positionDriver2D():
             msg = lcm_msgs.auto_decode(channel, data)
             msg.velocity = max(min(msg.velocity, self.velocityLimit), 0.0)
             if DEBUG_HANDLE:
-                print("Received msg:\n\tutime: {}\n\tvelocity: {}\n\tposition: "
-                      "".format(msg.utime, msg.velocity, msg.position))
-         inMessages.append(msg)
+                print("Received msg:\n\tutime: {}\n\tvelocity: {}\n\tposition:"
+                      " {}".format(msg.utime, msg.velocity, msg.position))
+            self.inMessages.append(msg)
         except:
             self.cleanUp(offerRetreat=False)
             raise

@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 
 def openSerial(serialConnection):
@@ -33,7 +34,7 @@ def makeCmd(xPos, yPos, speed):
     """
     Takes position and speed commands in m and m/s and returns in GRBL format
     """
-    return = "X{} Y{} F{}".format(-mToMM(xPos), -mToMM(yPos), mpsToMMPMin(speed))
+    return "X{} Y{} F{}".format(mToMM(xPos), mToMM(yPos), mpsToMMPMin(speed))
 
 
 def sendLines(serialConnection, lines, debug=False):
@@ -64,7 +65,8 @@ def sendLines(serialConnection, lines, debug=False):
             grbl_out = serialConnection.readline(30)
             if debug:
                 print("grbl_out: {}".format(grbl_out))
-        return grbl_out
+
+    return grbl_out
 
 
 def retreat(offerRetreat, serialConnection, position):
@@ -80,7 +82,7 @@ def retreat(offerRetreat, serialConnection, position):
             if retreatCorrect.lower() != 'n':
                 retreatSpeed = 0.025  # m/s (1500 mm/min)
                 sleepTime = np.linalg.norm(position) / retreatSpeed + 1.5
-                line = makeCmd(xPos, yPos, retreatSpeed)
+                line = makeCmd(-position[0], -position[1], retreatSpeed)
                 sendLines(serialConnection, [line], DEBUG_SENDLINES)
                 print("Sleeping for {} seconds to move...".format(sleepTime))
                 time.sleep(sleepTime)
