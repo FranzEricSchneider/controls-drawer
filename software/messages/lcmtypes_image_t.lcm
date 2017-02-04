@@ -1,5 +1,4 @@
 package lcmtypes;
-
 struct image_t {
   // timestamp
   int64_t utime;

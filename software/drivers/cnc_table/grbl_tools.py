@@ -29,6 +29,13 @@ def haltMessage():
     return ["X0 Y0"]
 
 
+def makeCmd(xPos, yPos, speed):
+    """
+    Takes position and speed commands in m and m/s and returns in GRBL format
+    """
+    return = "X{} Y{} F{}".format(-mToMM(xPos), -mToMM(yPos), mpsToMMPMin(speed))
+
+
 def sendLines(serialConnection, lines, debug=False):
     if serialConnection.closed:
         raise RuntimeError("Told to send commands but serial port closed")
@@ -60,7 +67,9 @@ def sendLines(serialConnection, lines, debug=False):
         return grbl_out
 
 
-def retreat(offerRetreat, serialConnection, xPos, yPos):
+def retreat(offerRetreat, serialConnection, position):
+    xPos = position[0]
+    yPos = position[1]
     if offerRetreat:
         # Wait here until grbl is finished to close serial port and file.
         shouldRetreat = raw_input("Program done. Do you want to retreat" +\
@@ -72,9 +81,7 @@ def retreat(offerRetreat, serialConnection, xPos, yPos):
             if retreatCorrect.lower() != 'n':
                 retreatSpeed = 0.025  # m/s (1500 mm/min)
                 sleepTime = np.linalg.norm(np.array([xPos, yPos])) / retreatSpeed + 1.5
-                line = "X{} Y{} F{}".format(-mToMM(xPos),
-                                            -mToMM(yPos),
-                                            mpsToMMPMin(retreatSpeed))
+                line = makeCmd(xPos, yPos, retreatSpeed)
                 sendLines(serialConnection, [line], DEBUG_SENDLINES)
                 print("Sleeping for {} seconds to move...".format(sleepTime))
                 time.sleep(sleepTime)
