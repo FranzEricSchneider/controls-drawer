@@ -7,7 +7,9 @@ import lcmtypes
 KNOWN_MESSAGES = {
     'IMAGE_CROPPED' : lcmtypes.image_t,
     'IMAGE_RAW' : lcmtypes.image_t,
+    'POSITION_COMMAND' : lcmtypes.relative_position_t,
     'REQUEST_IMAGE' : lcmtypes.image_request_t,
+    'TOOL_STATE' : lcmtypes.tool_state_t,
 }
 
 def auto_decode(channel, data):
@@ -31,3 +33,8 @@ def image_t_to_nparray(image_t):
     else:
         raise Exception
     return frame
+
+def lcmobj_handle_msg(lcmobj, timeout):
+    rfds, wfds, efds = select.select([lcmobj.fileno()], [], [], timeout)
+    if rfds:
+        lcmobj.handle()
