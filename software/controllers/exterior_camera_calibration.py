@@ -19,7 +19,7 @@ POLYGON_DEGREE = 5
 # Polygon side length in meters
 SIDE_LENGTH = 0.015
 # Point at which to take a picture from (TODO: jitter this and take more pics)
-PICTURE_POSITION = [0.0, 0.02]
+PICTURE_POSITION = [-0.01, 0.015]
 
 
 class ExteriorCameraCalibration():
