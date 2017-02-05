@@ -1,4 +1,4 @@
 import cv2
 
-def writeImage(frame, path):
+def writeImage(path, frame):
     cv2.imwrite(path, frame)

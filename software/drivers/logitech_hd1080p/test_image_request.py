@@ -9,7 +9,8 @@ def main():
 
     ch = "REQUEST_IMAGE"
     msg = lcm_msgs.auto_instantiate(ch)
-    msg.format = msg.FORMAT_GRAY
+    msg.format = msg.FORMAT_BGR
+    # msg.format = msg.FORMAT_GRAY
     msg.n_arguments = 1
     msg.arg_names.append("crop")
     # msg.arg_values.append("0,0,863,479")

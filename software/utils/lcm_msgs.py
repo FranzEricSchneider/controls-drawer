@@ -6,6 +6,7 @@ import lcmtypes
 
 
 KNOWN_MESSAGES = {
+    'IMAGE_CALIB' : lcmtypes.image_t,
     'IMAGE_CROPPED' : lcmtypes.image_t,
     'IMAGE_RAW' : lcmtypes.image_t,
     'POSITION_COMMAND' : lcmtypes.relative_position_t,
@@ -34,7 +35,7 @@ def image_t_to_nparray(image_t):
     elif image_t.request.format == image_t.request.FORMAT_BGR:
         frame = frame.reshape(image_t.height, image_t.width, 3)
     else:
-        raise Exception
+        raise Exception("The requested image didn't have a specified format!")
     return frame
 
 def lcmobj_handle_msg(lcmobj, timeout=0.005):

@@ -8,6 +8,7 @@ import lcm
 
 from geometry import planar
 from utils import cv_tools
+from utils.grbl_tools import mToMM
 from utils import lcm_msgs
 
 
@@ -16,9 +17,9 @@ TRAVEL_SPEED = 0.01
 # Number of Polygon sides
 POLYGON_DEGREE = 5
 # Polygon side length in meters
-SIDE_LENGTH = 0.03
+SIDE_LENGTH = 0.015
 # Point at which to take a picture from (TODO: jitter this and take more pics)
-PICTURE_POSITION = [0.05, -0.1]
+PICTURE_POSITION = [0.0, 0.02]
 
 
 class ExteriorCameraCalibration():
@@ -27,8 +28,8 @@ class ExteriorCameraCalibration():
         self.lcmobj = lcm.LCM()
         self.toolStateChannel = "TOOL_STATE"
         self.posCmdChannel = "POSITION_COMMAND"
-        self.imageReqChannel = "IMAGE_REQUEST"
-        self.imageChannel = "CALIB_IMAGE"
+        self.imageReqChannel = "REQUEST_IMAGE"
+        self.imageChannel = "IMAGE_CALIB"
         self.toolSub = self.lcmobj.subscribe(self.toolStateChannel, self.onToolState)
         self.imageSub = self.lcmobj.subscribe(self.imageChannel, self.onImage)
 
@@ -67,33 +68,52 @@ class ExteriorCameraCalibration():
             #   is actually moving
             time.sleep(0.1)
 
-        # Take a picture
+        # Wait for camera to focus, then take a picture
+        print("Waiting for camera to focus (hopefully)")
+        time.sleep(10.0)
         imReqMsg = lcm_msgs.auto_instantiate(self.imageReqChannel)
         imReqMsg.format = imReqMsg.FORMAT_GRAY
         imReqMsg.name = self.__class__.__name__
         imReqMsg.dest_channel = self.imageChannel
+        print("Sent image request!")
         self.lcmobj.publish(self.imageReqChannel, imReqMsg.encode())
+
+        # Wait for a second to see if the picture came in
+        self.frame = None
+        startTime = time.time()
+        while time.time() < (startTime + 4.0) and self.frame is None:
+            lcm_msgs.lcmobj_handle_msg(self.lcmobj, timeout=0.05)
+            time.sleep(0.01)
+        if self.frame is None:
+            print("Never ended up getting an image!")
+        else:
+            import cv2
+            # Display the frame for funsies
+            cv2.imshow("frame", self.frame)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     def onToolState(self, channel, data):
         msg = lcm_msgs.auto_decode(channel, data)
         if self.lastMsg is not None:
-            # If the position was unchanging, the tool has stopped
+            # If the position is unchanging, the tool has stopped
             if np.allclose(msg.position, self.lastMsg.position):
                 self.systemStopped = True
         self.lastMsg = msg
 
     def onImage(self, channel, data):
+        print("Received an image!")
         # Decode/parse out the image
         image = lcm_msgs.auto_decode(channel, data)
-        frame = lcm_msgs.image_t_to_nparray(msg)
+        frame = lcm_msgs.image_t_to_nparray(image)
         # Save the image for safekeeping
-        imageName = "frame_{}.png".format(image.utime)
+        imageName = "frame_SL{}_X{}_Y{}_{}.png".format(
+            mToMM(SIDE_LENGTH), mToMM(PICTURE_POSITION[0]),
+            mToMM(PICTURE_POSITION[1]), image.utime
+        )
         cv_tools.writeImage(imageName, frame)
         print("Image saved to {}".format(imageName))
-        # Display the frame for funsies
-        cv2.imshow(imageName, frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        self.frame = frame
 
 
 if __name__ == "__main__":

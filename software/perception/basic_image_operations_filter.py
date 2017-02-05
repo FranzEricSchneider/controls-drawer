@@ -23,6 +23,8 @@ class BasicOpsFilter():
         # Create the basic msg variables
         inMsg = lcm_msgs.auto_decode(channel, data)
         outMsg = lcm_msgs.auto_instantiate(inMsg.request.dest_channel)
+        print("Received image on {}, re-publishing on {}"
+              "".format(channel, inMsg.request.dest_channel))
         # First off, copy the old message into the new
         outMsg = inMsg
         if len(inMsg.request.arg_names) > 0:

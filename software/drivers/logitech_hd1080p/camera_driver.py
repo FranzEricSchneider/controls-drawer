@@ -33,11 +33,8 @@ class CameraDriver():
         try:
             while(True):
                 # Wait for timeout to handle lcmobj or not
-                rfds, wfds, efds = select.select([self.lcmobj.fileno()],
-                                                 [], [], loopTimeout)
-                if rfds:
-                    self.lcmobj.handle()
-                
+                lcm_msgs.lcmobj_handle_msg(self.lcmobj, loopTimeout)
+
                 # Capture frame-by-frame. This is blocking
                 returnValue, self.frame = self.videoCapture.read()
         finally:
@@ -45,6 +42,8 @@ class CameraDriver():
             self.videoCapture.release()
 
     def handleRequest(self, channel, data):
+        print("Got image request!")
+
         # Grab the most recent image
         frame = self.frame
         # Create the basic msg variables
@@ -77,6 +76,7 @@ class CameraDriver():
         outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
         outMsg.num_data = len(outMsg.data)
         # Publish the raw image!
+        print("Publishing on {}".format(self.outputChannel))
         self.lcmobj.publish(self.outputChannel, outMsg.encode())
 
 

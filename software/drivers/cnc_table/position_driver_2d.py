@@ -105,7 +105,7 @@ class positionDriver2D():
                     #   last sent position command
                     timeLastSent = now
                     vectorLastSent = np.array(self.sentMessages[-1].position)
-                    vectorLastSent /= vectorLastSent
+                    vectorLastSent /= np.linalg.norm(vectorLastSent)
             except IndexError:
                 # An array hasn't been populated yet
                 pass
