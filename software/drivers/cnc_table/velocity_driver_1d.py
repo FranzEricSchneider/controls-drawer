@@ -29,8 +29,8 @@ class VelocityDriver1D():
         self.loopTimeout = 0.005                     # Time in s
         self.running = False
 
-        self.lcmObj = lcm.LCM()
-        self.subscription = self.lcmObj.subscribe("V_COMMAND", self.handleCommands)
+        self.lcmobj = lcm.LCM()
+        self.subscription = self.lcmobj.subscribe("V_COMMAND", self.handleCommands)
 
         # Open grbl serial port
         self.serialConnection = serial.Serial('/dev/ttyUSB0', 115200)
@@ -101,14 +101,14 @@ class VelocityDriver1D():
                 msg.position_m[0] = self.xPosition
                 msg.position_m[1] = self.yPosition
                 msg.cycle_start = firstLoopMsg
-                self.lcmObj.publish("HEAD_POSITION", msg.encode())
+                self.lcmobj.publish("HEAD_POSITION", msg.encode())
                 firstLoopMsg = False
 
-                # Wait for timeout to handle lcmObj, otherwise just pass
-                rfds, wfds, efds = select.select([self.lcmObj.fileno()],
+                # Wait for timeout to handle lcmobj, otherwise just pass
+                rfds, wfds, efds = select.select([self.lcmobj.fileno()],
                                                  [], [], self.loopTimeout)
                 if rfds:
-                    self.lcmObj.handle()
+                    self.lcmobj.handle()
             time.sleep(0.001)
 
         print("Out of the main loop! Cleaning up...")

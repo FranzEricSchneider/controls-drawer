@@ -9,15 +9,15 @@ from utils import lcm_msgs
 
 class BasicOpsFilter():
     def __init__(self, args):
-        self.lcmObj = lcm.LCM()
-        self.requestSub = self.lcmObj.subscribe(args.input_channel,
+        self.lcmobj = lcm.LCM()
+        self.requestSub = self.lcmobj.subscribe(args.input_channel,
                                                 self.handleRequest)
 
     def run(self, loopTimeout=0.05):
         while(True):
             # This is blocking, which is fine because all this does is wait
             #   until an image comes in and then handle it, wait for the next
-            self.lcmObj.handle()
+            self.lcmobj.handle()
 
     def handleRequest(self, channel, data):
         # Create the basic msg variables
@@ -49,7 +49,7 @@ class BasicOpsFilter():
                 outMsg.num_data = len(outMsg.data)
 
         # Publish the out image. If no operations were requested, could be same as input
-        self.lcmObj.publish(inMsg.request.dest_channel, outMsg.encode())
+        self.lcmobj.publish(inMsg.request.dest_channel, outMsg.encode())
 
 
 if __name__ == '__main__':

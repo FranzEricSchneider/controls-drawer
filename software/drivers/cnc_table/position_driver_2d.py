@@ -28,10 +28,10 @@ class positionDriver2D():
         self.sentMessages = []
 
         # Set up LCM objects
-        self.lcmObj = lcm.LCM()
+        self.lcmobj = lcm.LCM()
         self.inputChannel = "POSITION_COMMAND"
         self.outputChannel = "TOOL_STATE"
-        self.sub = self.lcmObj.subscribe(self.inputChannel, self.handleCommands)
+        self.sub = self.lcmobj.subscribe(self.inputChannel, self.handleCommands)
 
         # Open grbl serial port
         self.serial = serial.Serial("/dev/ttyUSB0", 115200)
@@ -63,19 +63,25 @@ class positionDriver2D():
             # Update estimation of state
             try:
                 positionCmds = np.array([cmd.position for cmd in self.sentMessages])
-                # If we have sent commands W, X, Y, Z, this computes the tool
-                #   position at the end of command Y. Theoretically, command Z is
-                #   happening right now
-                lastCmdPosition = np.sum(positionCmds[:-1], axis=0)
                 distTravelled = (now - timeLastSent) * self.sentMessages[-1].velocity
-                self.position = lastCmdPosition + vectorLastSent * distTravelled
+                if distTravelled < np.linalg.norm(self.sentMessages[-1].position):
+                    # If we have sent commands W, X, Y, Z, this computes the tool
+                    #   position at the end of command Y. Theoretically, command Z is
+                    #   happening right now
+                    lastCmdPosition = np.sum(positionCmds[:-1], axis=0)
+                    self.position = lastCmdPosition + vectorLastSent * distTravelled
+                else:
+                    # We should have stopped moving at this point (roughly), the
+                    #   (x, y) position should be the sum of all the previous
+                    #   movements
+                    self.position = np.sum(positionCmds, axis=0)
 
                 # Send out state
                 stateMsg = lcm_msgs.auto_instantiate(self.outputChannel)
                 stateMsg.position = list(self.position)
                 stateMsg.cycle_start = firstLoopMsg
                 firstLoopMsg = False
-                self.lcmObj.publish(self.outputChannel, stateMsg.encode())
+                self.lcmobj.publish(self.outputChannel, stateMsg.encode())
             except IndexError:
                 # An array hasn't been populated yet
                 pass
@@ -106,7 +112,7 @@ class positionDriver2D():
 
             # Handle incoming requests if they've come in. If not, timeout and
             #   move on with your life
-            lcm_msgs.lcmobj_handle_msg(self.lcmObj, LOOP_TIMEOUT)
+            lcm_msgs.lcmobj_handle_msg(self.lcmobj, LOOP_TIMEOUT)
 
             # Sleep in the loop
             time.sleep(LOOP_SLEEP)

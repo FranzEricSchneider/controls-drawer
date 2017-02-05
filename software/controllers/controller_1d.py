@@ -2,10 +2,6 @@
 
 import argparse
 import numpy as np
-import select
-import serial
-import signal
-import time
 
 import lcm
 
