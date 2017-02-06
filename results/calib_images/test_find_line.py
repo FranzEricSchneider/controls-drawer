@@ -13,14 +13,14 @@ threshold1 = 90
 threshold2 = 100
 edges = cv2.Canny(img, threshold1, threshold2)
 
-minLineLength = 150
+minLineLength = 40
 lines = cv2.HoughLinesP(image=edges,
-                        rho=0.02,
-                        theta=np.pi/500,
+                        rho=4,
+                        theta=np.pi/180,
                         threshold=10,
                         lines=np.array([]),
                         minLineLength=minLineLength,
-                        maxLineGap=100)
+                        maxLineGap=20)
 
 a,b,c = lines.shape
 print("Number of lines: {}".format(a))
@@ -32,9 +32,42 @@ for i in xrange(a):
              thickness=1,
              lineType=cv2.LINE_AA)
 
-cv2.imshow('start', img)
-cv2.imshow('edges', edges)
+cv2.namedWindow("result", cv2.WINDOW_AUTOSIZE)
+cv2.startWindowThread()
+# cv2.imshow('start', img)
+# cv2.imshow('edges', edges)
 cv2.imshow('result', drawImg)
-
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+cv2.waitKey(1)
+
+result = "n"
+indices = range(a)
+while result != "q":
+    textImg = img.copy()
+
+    # Try to remove the indicated index
+    try:
+        indices.remove(int(result))
+    except ValueError:
+        pass
+
+    for i in indices:
+        cv2.line(img=textImg,
+                 pt1=(lines[i][0][0], lines[i][0][1]),
+                 pt2=(lines[i][0][2], lines[i][0][3]),
+                 color=(0, 0, 255),
+                 thickness=1,
+                 lineType=cv2.LINE_AA)
+
+        midPoint = np.average((lines[i][0][:2], lines[i][0][2:]), axis=0)
+        midPoint = tuple([int(axis) for axis in midPoint])
+        cv2.putText(textImg, "{}".format(i), midPoint, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
+    print("Hit numbers that you would like to delete, hit q to move on")
+    cv2.namedWindow("text", cv2.WINDOW_AUTOSIZE)
+    cv2.startWindowThread()
+    cv2.imshow('text', textImg)
+    result = chr(cv2.waitKey(0))
+    cv2.destroyAllWindows()
+    print("result! {}".format(result))
+
