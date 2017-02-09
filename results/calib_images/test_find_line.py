@@ -29,26 +29,27 @@ for i in xrange(a):
              pt1=(lines[i][0][0], lines[i][0][1]),
              pt2=(lines[i][0][2], lines[i][0][3]),
              color=(0, 0, 255),
-             thickness=1,
-             lineType=cv2.LINE_AA)
+             thickness=1)
 
-cv2.namedWindow("result", cv2.WINDOW_AUTOSIZE)
+cv2.namedWindow("initial_detection", cv2.WINDOW_AUTOSIZE)
 cv2.startWindowThread()
 # cv2.imshow('start', img)
 # cv2.imshow('edges', edges)
-cv2.imshow('result', drawImg)
+cv2.imshow('initial_detection', drawImg)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 cv2.waitKey(1)
 
-result = "n"
+result = ""
 indices = range(a)
 while result != "q":
     textImg = img.copy()
 
     # Try to remove the indicated index
     try:
-        indices.remove(int(result))
+        badIndices = [int(index.strip()) for index in result.split(",")]
+        for index in badIndices:
+            indices.remove(index)
     except ValueError:
         pass
 
@@ -57,17 +58,32 @@ while result != "q":
                  pt1=(lines[i][0][0], lines[i][0][1]),
                  pt2=(lines[i][0][2], lines[i][0][3]),
                  color=(0, 0, 255),
-                 thickness=1,
-                 lineType=cv2.LINE_AA)
-
+                 thickness=1)
         midPoint = np.average((lines[i][0][:2], lines[i][0][2:]), axis=0)
         midPoint = tuple([int(axis) for axis in midPoint])
         cv2.putText(textImg, "{}".format(i), midPoint, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
-    print("Hit numbers that you would like to delete, hit q to move on")
+    print("Look at the image and decide which line numbers you can delete")
     cv2.namedWindow("text", cv2.WINDOW_AUTOSIZE)
     cv2.startWindowThread()
     cv2.imshow('text', textImg)
-    result = chr(cv2.waitKey(0))
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
-    print("result! {}".format(result))
+    result = raw_input('Which numbers would you like to delete?\n'
+                       '\tenter as CSV (e.g. 12, 0, 5[enter])\n'
+                       '\tor hit q to move on')
 
+# Now we have an image and just the lines that correspond to the pentagon. Time
+#   to map the lines to specific edges of the pentagon
+
+allLines = []
+for i in xrange(5):
+    print("Look - which lines corresponds to edge {}?".format(i))
+    cv2.namedWindow("text", cv2.WINDOW_AUTOSIZE)
+    cv2.startWindowThread()
+    cv2.imshow('text', textImg)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    result = raw_input("Which two lines correspond to edge {}? Enter as csv".format(i))
+    singleEdgeLines = [int(index) for index in result.split(",")]
+    allLines.append(singleEdgeLines)
+print("allLines! {}".format(allLines))
