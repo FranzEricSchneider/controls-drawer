@@ -84,14 +84,53 @@ class FiniteLine():
         return np.array([self.pt1[1], self.pt2[1]])
 
     @property
+    def intPt1(self):
+        return np.array(self.pt1, dtype=np.int64)
+
+    @property
+    def intPt2(self):
+        return np.array(self.pt2, dtype=np.int64)
+
+    @property
     def length(self):
         return np.linalg.norm(self.pt2 - self.pt1)
+
+    def getMidpoint(self, returnTupleInt=False):
+        try:
+            if returnTupleInt:
+                return tuple([int(axis) for axis in self.midpoint])
+            else:
+                return self.midpoint
+        except AttributeError:
+            self.midpoint = np.array([np.average(self.x), np.average(self.y)])
+            return self.getMidpoint(returnTupleInt)
+
+    # An "average line" as I'm using it is formed by averaging the (x,y) values
+    #   of the endpoints, where the chosen endpoints are the endpoints with the
+    #   least distance between them (e.g. if we can get closer endpoints by
+    #   swapping one of the line pairs, do that)
+    def average(self, line):
+        if not isinstance(line, FiniteLine):
+            # For now. Maybe in the future allow averaging with other lines
+            raise ValueError('Muse average with another FiniteLine')
+        lpt1 = line.pt1.copy()
+        lpt2 = line.pt2.copy()
+        # Check - would the endpoint pairs be shorter if we switched one of the
+        #   lines, or are we best off if we leave the lines as is?
+        leave = np.linalg.norm(self.pt1 - lpt1) + np.linalg.norm(self.pt2 - lpt2)
+        switch = np.linalg.norm(self.pt1 - lpt2) + np.linalg.norm(self.pt2 - lpt1)
+        if switch < leave:
+            lpt1, lpt2 = lpt2, lpt1
+        # Now calculate a new line
+        pt1 = np.average([self.pt1, lpt1], axis=0)
+        pt2 = np.average([self.pt2, lpt2], axis=0)
+        return FiniteLine(pt1=pt1, pt2=pt2)
 
     def onImage(self, image, color=(0, 0, 255), thickness=2):
         # Color is in BGR
         import cv2
-        cv2.line(img=image, pt1=tuple(self.pt1), pt2=tuple(self.pt2),
-                 color=color, thickness=1)
+        cv2.line(img=image, pt1=tuple(self.intPt1), pt2=tuple(self.intPt2),
+                 color=color, thickness=thickness)
 
     def plot(self, axis, color=(1.0, 0.0, 0.0), thickness=2):
         axis.plot(self.x, self.y, color=color, linewidth=thickness)
