@@ -106,9 +106,8 @@ class FiniteLine():
             return self.getMidpoint(returnTupleInt)
 
     # An "average line" as I'm using it is formed by averaging the (x,y) values
-    #   of the endpoints, where the chosen endpoints are the endpoints with the
-    #   least distance between them (e.g. if we can get closer endpoints by
-    #   swapping one of the line pairs, do that)
+    #   of the endpoints, where the chosen endpoints are the ones that will
+    #   make the longest average line
     def average(self, line):
         if not isinstance(line, FiniteLine):
             # For now. Maybe in the future allow averaging with other lines
@@ -117,14 +116,14 @@ class FiniteLine():
         lpt2 = line.pt2.copy()
         # Check - would the endpoint pairs be shorter if we switched one of the
         #   lines, or are we best off if we leave the lines as is?
-        leave = np.linalg.norm(self.pt1 - lpt1) + np.linalg.norm(self.pt2 - lpt2)
-        switch = np.linalg.norm(self.pt1 - lpt2) + np.linalg.norm(self.pt2 - lpt1)
-        if switch < leave:
-            lpt1, lpt2 = lpt2, lpt1
-        # Now calculate a new line
         pt1 = np.average([self.pt1, lpt1], axis=0)
         pt2 = np.average([self.pt2, lpt2], axis=0)
-        return FiniteLine(pt1=pt1, pt2=pt2)
+        switchPt1 = np.average([self.pt1, lpt2], axis=0)
+        switchPt2 = np.average([self.pt2, lpt1], axis=0)
+        if np.linalg.norm(switchPt2 - switchPt1) > np.linalg.norm(pt2 - pt1):
+            return FiniteLine(pt1=switchPt1, pt2=switchPt2)
+        else:
+            return FiniteLine(pt1=pt1, pt2=pt2)
 
     def onImage(self, image, color=(0, 0, 255), thickness=2):
         # Color is in BGR
@@ -137,7 +136,7 @@ class FiniteLine():
 
 
 class InfiniteLine():
-    def __init__(self, pt1=None, pt2=None, normal=None, bias=None):
+    def __init__(self, pt1=None, pt2=None, normal=None, bias=None, fLine=None):
         """
         Inputs:
             pt1/2 - Either 2x1 or 3x1 nparrays
@@ -150,7 +149,8 @@ class InfiniteLine():
           2) If given a normal and a vector the line is defined as being
              perpendicular to the normal and bias units from the origin
         """
-        if pt1 is None and pt2 is None and normal is None and bias is None:
+        if (pt1 is None and pt2 is None and normal is None and bias is None
+            and fLine is None):
             # The basic line is along the X axis, intersecting the origin
             self.normal = np.array([0.0, 1.0])
             self.bias = 0.0
@@ -192,6 +192,8 @@ class InfiniteLine():
         elif normal is not None and bias is not None:
             self.normal = normal
             self.bias = bias
+        elif fLine is not None:
+            self.__init__(pt1=fLine.pt1, pt2=fLine.pt2)
         else:
             raise ValueError('InfiniteLine init called, unclear resolution')
 
@@ -203,6 +205,18 @@ class InfiniteLine():
             self.parallelLine = np.cross(np.hstack((self.normal, 0.0)),
                                          np.array([0.0, 0.0, 1.0]))[:2]
             return self.parallelLine
+
+    def onImage(self, image, color=(0, 0, 255), thickness=2):
+        # Color is in BGR
+        import cv2
+        # Make the length of the vectors definitely longer that the picture,
+        #   because the normals are not garuanteed to originate from the image
+        length = np.max(image.shape) * 2
+        midpoint = self.normal * self.bias
+        endPoints = np.array([midpoint + self.parallel * length,
+                              midpoint - self.parallel * length], dtype=np.int64)
+        cv2.line(img=image, pt1=tuple(endPoints[0, :]), pt2=tuple(endPoints[1, :]),
+                 color=color, thickness=thickness)
 
     def plot(self, axis, length=10, color=(1.0, 0.0, 0.0), thickness=2):
         midpoint = self.normal * self.bias

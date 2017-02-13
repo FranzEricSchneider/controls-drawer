@@ -89,3 +89,11 @@ class TestInfiniteLine(unittest.TestCase):
         plt.plot(pt2[0], pt2[1], 'r.', markersize=10)
         plt.title("Line from {} to {}, thin and blue".format(pt1, pt2))
         plt.show()
+
+    def TestInfiniteFromFinite(self):
+        pt1 = np.array([-1.0, 1.0])
+        pt2 = np.array([1.0, 1.0])
+        fLine = planar.FiniteLine(pt1=pt1, pt2=pt2)
+        iLine = planar.InfiniteLine(fLine=fLine)
+        self.assertTrue(np.allclose(iLine.normal, np.array([0.0, 1.0])))
+        self.assertTrue(np.isclose(iLine.bias, 1.0))

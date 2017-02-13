@@ -37,6 +37,7 @@ cv2.waitKey(0)
 cv2.destroyAllWindows()
 cv2.waitKey(1)
 
+# Do you want to delete any?
 result = ""
 indices = range(len(fLines))
 while result != "q":
@@ -65,6 +66,38 @@ while result != "q":
 
 print("Moving on! indices: {}".format(indices))
 
+# Do you want to merge any?
+result = ""
+while result != "q":
+    textImg = img.copy()
+
+    # Try to remove the indicated index
+    try:
+        badIndices = [int(index.strip()) for index in result.split(" ")]
+        if len(badIndices) != 2:
+            raise ValueError('You need two good numbers')
+        for index in badIndices:
+            indices.remove(index)
+        indices.append(len(fLines))
+        fLines.append(fLines[badIndices[0]].average(fLines[badIndices[1]]))
+    except ValueError:
+        pass
+
+    for i in indices:
+        fLines[i].onImage(textImg)
+        midpoint = fLines[i].getMidpoint(returnTupleInt=True)
+        cv2.putText(textImg, "{}".format(i), midpoint, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0))
+    print("Look at the image and decide which line numbers you want to merge")
+    cv2.namedWindow("text", cv2.WINDOW_AUTOSIZE)
+    cv2.startWindowThread()
+    cv2.imshow('text', textImg)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    result = raw_input('Which numbers would you merge? enter 2 w/ spaces (e.g.'
+                       ' 12 0[enter]) or hit q to move on: ')
+
+print("Moving on! indices: {}".format(indices))
+
 # Now we have an image and just the lines that correspond to the pentagon. Time
 #   to map the lines to specific edges of the pentagon
 allLines = []
@@ -85,6 +118,9 @@ print("allLines! {}".format(allLines))
 midLines = [fLines[allLines[index][0]].average(fLines[allLines[index][1]])
             for index in xrange(5)]
 midlineImage = img.copy()
+midILines = [InfiniteLine(fLine=line) for line in midLines]
+for line in midILines:
+    line.onImage(midlineImage, thickness=1)
 for line in midLines:
     line.onImage(midlineImage, color=(0, 255, 0), thickness=2)
 
