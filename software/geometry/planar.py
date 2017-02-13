@@ -111,7 +111,7 @@ class FiniteLine():
     def average(self, line):
         if not isinstance(line, FiniteLine):
             # For now. Maybe in the future allow averaging with other lines
-            raise ValueError('Muse average with another FiniteLine')
+            raise ValueError('Must use average with another FiniteLine')
         lpt1 = line.pt1.copy()
         lpt2 = line.pt2.copy()
         # Check - would the endpoint pairs be shorter if we switched one of the
@@ -198,6 +198,14 @@ class InfiniteLine():
             raise ValueError('InfiniteLine init called, unclear resolution')
 
     @property
+    def mid(self):
+        try:
+            return self.midpoint
+        except AttributeError:
+            self.midpoint = self.normal * self.bias
+            return self.midpoint
+
+    @property
     def parallel(self):
         try:
             return self.parallelLine
@@ -206,22 +214,45 @@ class InfiniteLine():
                                          np.array([0.0, 0.0, 1.0]))[:2]
             return self.parallelLine
 
+    def intersection(self, line):
+        if not isinstance(line, InfiniteLine):
+            # For now. Maybe in the future allow averaging with other lines
+            raise ValueError('Must use intersect with another InfiniteLine')
+        if abs(self.normal.dot(line.normal)) > (1.0 - 1e-6):
+            # If the lines are parallel, return no intersection
+            return None
+
+        # Alright, assume that we have two lines, with normals n1/n2 and biases
+        #   b1/b2. These lines have start points p1 (x1,y1) and p2 (x2,y2), and
+        #   parallel vectors v1/v2. We know that if the points intersect then
+        #   p1 + k1 * v1 = p2 + k2 * v2, where k1/k2 are scaling factors
+        #   After some juggling we get this:
+        #       M^-1 [x1 - x2] = [k1],  M = -v1x v2x
+        #            [y1 - y2]   [k2]       -v1y v2y
+        points = self.mid - line.mid
+        # M is not necessarily orthonormal b/c the lines don't have to be
+        #   orthogonal
+        M = np.array([[-self.parallel[0], line.parallel[0]],
+                      [-self.parallel[1], line.parallel[1]]])
+        k1k2 = np.linalg.inv(M).dot(points)
+        # Return the absolute point in space of intersection using either
+        #   equality - distance from p1 or from p2
+        return line.mid + line.parallel * k1k2[1]
+
     def onImage(self, image, color=(0, 0, 255), thickness=2):
         # Color is in BGR
         import cv2
         # Make the length of the vectors definitely longer that the picture,
         #   because the normals are not garuanteed to originate from the image
         length = np.max(image.shape) * 2
-        midpoint = self.normal * self.bias
-        endPoints = np.array([midpoint + self.parallel * length,
-                              midpoint - self.parallel * length], dtype=np.int64)
+        endPoints = np.array([self.mid + self.parallel * length,
+                              self.mid - self.parallel * length], dtype=np.int64)
         cv2.line(img=image, pt1=tuple(endPoints[0, :]), pt2=tuple(endPoints[1, :]),
                  color=color, thickness=thickness)
 
     def plot(self, axis, length=10, color=(1.0, 0.0, 0.0), thickness=2):
-        midpoint = self.normal * self.bias
-        endPoints = np.array([midpoint + self.parallel * length,
-                              midpoint - self.parallel * length])
+        endPoints = np.array([self.mid + self.parallel * length,
+                              self.mid - self.parallel * length])
         axis.plot(
             endPoints[:, 0], endPoints[:, 1], color=color, linewidth=thickness
         )
