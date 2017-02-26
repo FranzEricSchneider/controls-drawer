@@ -3,6 +3,7 @@
 # (x, y, 0), 2D points (x, y, 1), or angles in radians
 ################################################################################
 
+import cv2
 import numpy as np
 
 
@@ -127,9 +128,15 @@ class FiniteLine():
 
     def onImage(self, image, color=(0, 0, 255), thickness=2):
         # Color is in BGR
-        import cv2
         cv2.line(img=image, pt1=tuple(self.intPt1), pt2=tuple(self.intPt2),
                  color=color, thickness=thickness)
+
+    def textOnImage(self, image, text, fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.5, color=(255, 0, 0)):
+        # Color is in BGR
+        origin = self.getMidpoint(returnTupleInt=True)
+        cv2.putText(img=image, text=text, org=origin, fontFace=fontFace,
+                    fontScale=fontScale, color=color)
 
     def plot(self, axis, color=(1.0, 0.0, 0.0), thickness=2):
         axis.plot(self.x, self.y, color=color, linewidth=thickness)
