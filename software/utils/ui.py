@@ -1,8 +1,9 @@
-################################################################################
+###############################################################################
 # Has functions for querying the user for information (for the purposes of
 # cheating, normally)
-################################################################################
+###############################################################################
 
+from collections import defaultdict
 import cv2
 from humanfriendly import prompts
 import numpy as np
@@ -94,7 +95,57 @@ class AskAboutLinesToMerge(AskAboutImage):
         )
 
 
-# class AskAboutPentagonLines(AskAboutImage):
+class AskAboutPentagonLines(AskAboutImage):
+    def __init__(self, image, finiteLines, indices):
+        AskAboutImage.__init__(self, image, finiteLines, indices)
+        self.sideNames = {0 : "(bottom side)",
+                          1 : "(lower right)",
+                          2 : "(upper right)",
+                          3 : "(upper left)",
+                          4 : "(lower left)"}
+        # Stores these in the form {idx : sideNumber}
+        self.sideIndices = {}
+
+    def imageWithLines(self):
+        # Make a copy for fresh display
+        image = self.image.copy()
+        # Go in and render the lines remaining
+        for i in self.indices:
+            self.finiteLines[i].onImage(image)
+            if i in self.sideIndices.keys():
+                lineText = "{}, side {}".format(i, self.sideIndices[i] + 1)
+            else:
+                lineText = "{}".format(i)
+            self.finiteLines[i].textOnImage(image, lineText)
+        return image
+
+    def processImage(self):
+        # Get the points on each side of the pentagon
+        for i in xrange(5):
+            print("Look for the lines that make up side {} {}"
+                  "".format(i + 1, self.sideNames[i]))
+            self.displayImage()
+            # Get the thus unused indices
+            unusedIndices = []
+            for idx in self.indices:
+                if idx not in self.sideIndices.keys():
+                    unusedIndices.append(idx)
+            # Get the lines from the user that correspond to this edge
+            prompt = "Select the lines that make up side {}".format(i + 1)
+            lines = queryList(prompt, allowedValues=unusedIndices, forceLen=2)
+            for lineIdx in lines:
+                self.sideIndices[lineIdx] = i
+
+    def getSidesByIndex(self):
+        return self.sideIndices
+
+    def getIndicesBySide(self):
+        indicesBySide = defaultdict(list)
+        # Swap the key/value order
+        for k, v in self.sideIndices.items():
+            indicesBySide[v].append(k)
+        # Return the values as numpy arrays
+        return {k : np.array(v) for k, v in indicesBySide.items()}
 
 
 def queryList(prompt, allowedValues=None, allowDuplicates=False, forceLen=None,

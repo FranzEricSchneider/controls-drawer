@@ -2,7 +2,9 @@ import numpy as np
 import cv2
 
 from geometry.planar import FiniteLine, InfiniteLine
-from utils.ui import AskAboutLinesToRemove, AskAboutLinesToMerge
+from utils.ui import AskAboutLinesToMerge
+from utils.ui import AskAboutLinesToRemove
+from utils.ui import AskAboutPentagonLines
 
 
 img = cv2.imread('frame_SL15_X-10_Y15_1486332586617381.png')
@@ -53,23 +55,16 @@ lineMerger.processImage()
 indices = lineMerger.getIndices()
 fLines = lineMerger.getLines()
 
-# TODO: Make an edge identifier
 # Now we have an image and just the lines that correspond to the pentagon. Time
 #   to map the lines to specific edges of the pentagon
 allLines = []
-textImg = lineMerger.imageWithLines()
+pentagon = AskAboutPentagonLines(img, fLines, indices)
+pentagon.processImage()
+indicesBySide = pentagon.getIndicesBySide()
 for i in xrange(5):
-    print("Look - which lines corresponds to edge {}?".format(i))
-    cv2.namedWindow("text", cv2.WINDOW_AUTOSIZE)
-    cv2.startWindowThread()
-    cv2.imshow('text', textImg)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    result = raw_input("Which two lines correspond to edge {}? Enter with"
-                       " spaces in between (e.g. 11 3): ".format(i))
-    singleEdgeLines = [int(index.strip()) for index in result.split(" ")]
-    allLines.append(singleEdgeLines)
+    allLines.append(indicesBySide[i])
 print("allLines! {}".format(allLines))
+
 
 # Time to estimate midlines and points
 midLines = [fLines[allLines[index][0]].average(fLines[allLines[index][1]])
