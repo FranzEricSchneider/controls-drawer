@@ -27,9 +27,11 @@ class AskAboutImage():
     def imageWithLines(self):
         # Make a copy for fresh display
         image = self.image.copy()
-        # Go in and render the lines remaining
+        # Go in and render the lines remaining (do the lines first)
         for i in self.indices:
             self.finiteLines[i].onImage(image)
+        # Label the text for each line after doing all the lines
+        for i in self.indices:
             self.finiteLines[i].textOnImage(image, "{}".format(i))
         return image
 
@@ -109,9 +111,11 @@ class AskAboutPentagonLines(AskAboutImage):
     def imageWithLines(self):
         # Make a copy for fresh display
         image = self.image.copy()
-        # Go in and render the lines remaining
+        # Go in and render the lines remaining (do the lines first)
         for i in self.indices:
             self.finiteLines[i].onImage(image)
+        # Label the text for each line after doing all the lines
+        for i in self.indices:
             if i in self.sideIndices.keys():
                 lineText = "{}, side {}".format(i, self.sideIndices[i] + 1)
             else:
