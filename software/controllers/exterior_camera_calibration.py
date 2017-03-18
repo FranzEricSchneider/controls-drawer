@@ -140,7 +140,7 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", "--draw-pentagon",
                         help="Draw pentagon (don't draw if already in place)",
-                        action='store_false')    
+                        action='store_false')
     parser.add_argument("-n", "--num-pictures",
                         help="Number of pictures to take of the polygon",
                         type=int,
