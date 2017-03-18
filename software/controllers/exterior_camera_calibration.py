@@ -35,21 +35,22 @@ class ExteriorCameraCalibration():
         self.toolSub = self.lcmobj.subscribe(self.toolStateChannel, self.onToolState)
         self.imageSub = self.lcmobj.subscribe(self.imageChannel, self.onImage)
 
-        # # Ask and make sure the system is set up
-        # raw_input("Is system in place and pen down? [enter]")
+        if args.draw_pentagon:
+            # Ask and make sure the system is set up
+            raw_input("Is system in place and pen down? [enter]")
 
-        # # Draw a pentagon
-        # vectors = planar.polygonVectors(POLYGON_DEGREE)
-        # msg = lcm_msgs.auto_instantiate(self.posCmdChannel)
-        # msg.velocity = TRAVEL_SPEED
-        # for i in xrange(POLYGON_DEGREE):
-        #     msg.position = vectors[i][0:2] * SIDE_LENGTH
-        #     msg.utime = lcm_msgs.utime_now()
-        #     self.lcmobj.publish(self.posCmdChannel, msg.encode())
+            # Draw a pentagon
+            vectors = planar.polygonVectors(POLYGON_DEGREE)
+            msg = lcm_msgs.auto_instantiate(self.posCmdChannel)
+            msg.velocity = TRAVEL_SPEED
+            for i in xrange(POLYGON_DEGREE):
+                msg.position = vectors[i][0:2] * SIDE_LENGTH
+                msg.utime = lcm_msgs.utime_now()
+                self.lcmobj.publish(self.posCmdChannel, msg.encode())
 
-        # # Lift the pen
-        # raw_input("Lift pen (don't joggle tool) hit enter when done [enter]")
-        # # Make a tool that lifts the pen up!
+            # Lift the pen
+            raw_input("Lift pen (don't joggle tool) hit enter when done [enter]")
+            # Make a tool that lifts the pen up!
 
         for i in xrange(args.num_pictures):
             imagingPosition = [
@@ -137,6 +138,9 @@ class ExteriorCameraCalibration():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Runs exterior (hand<>eye) camera calibration",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-d", "--draw-pentagon",
+                        help="Draw pentagon (don't draw if already in place)",
+                        action='store_false')    
     parser.add_argument("-n", "--num-pictures",
                         help="Number of pictures to take of the polygon",
                         type=int,
