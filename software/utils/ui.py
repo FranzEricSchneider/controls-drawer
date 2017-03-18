@@ -64,7 +64,9 @@ class AskAboutLinesToRemove(AskAboutImage):
         self.actionTask = "Select all line indices you would like to remove"
 
     def processIndices(self):
-        userList = queryList(self.actionTask, allowedValues=self.indices)
+        userList = queryList(self.actionTask,
+                             allowedValues=self.indices,
+                             redisplay=self.displayImage)
         print("Removing indices {} from {}\n".format(userList, self.indices))
         # Remove indices while checking that all indices are available
         for idx in userList:
@@ -79,8 +81,10 @@ class AskAboutLinesToMerge(AskAboutImage):
         self.actionTask = "Select two lines you would like to merge"
 
     def processIndices(self):
-        userList = queryList(self.actionTask, allowedValues=self.indices,
-                             forceLen=2)
+        userList = queryList(self.actionTask,
+                             allowedValues=self.indices,
+                             forceLen=2,
+                             redisplay=self.displayImage)
         print("Merging indices {} into one line\n".format(userList))
         # Check that we are only merging two lines
         assert len(userList) == 2
@@ -136,7 +140,10 @@ class AskAboutPentagonLines(AskAboutImage):
                     unusedIndices.append(idx)
             # Get the lines from the user that correspond to this edge
             prompt = "Select the lines that make up side {}".format(i + 1)
-            lines = queryList(prompt, allowedValues=unusedIndices, forceLen=2)
+            lines = queryList(prompt,
+                              allowedValues=unusedIndices,
+                              forceLen=2,
+                              redisplay=self.displayImage)
             for lineIdx in lines:
                 self.sideIndices[lineIdx] = i
 
@@ -153,9 +160,10 @@ class AskAboutPentagonLines(AskAboutImage):
 
 
 def queryList(prompt, allowedValues=None, allowDuplicates=False, forceLen=None,
-              forceType=int):
+              forceType=int, redisplay=None):
     print(prompt)
     print("(NOTE) x means delete what you have and re-start")
+    print("(NOTE) r means re-see the image and restart choices")
     if forceLen is None:
         print("(NOTE) q means done")
     else:
@@ -171,12 +179,20 @@ def queryList(prompt, allowedValues=None, allowDuplicates=False, forceLen=None,
             done = True
             continue
 
-        result = raw_input("Type and hit [enter] (remember x to restart, q to"
-                           " end if applicable): ")
+        result = raw_input("Type and hit [enter] (remember x restart, q end, r"
+                           " re-show image): ")
         if result.lower().startswith("x"):
             print("Alright, we had {} but we are chucking this and starting"
                   " fresh".format(valueList))
             valueList = []
+        elif result.lower().startswith("r") and redisplay is not None:
+            redisplay()
+            return queryList(prompt=prompt,
+                             allowedValues=allowedValues,
+                             allowDuplicates=allowDuplicates,
+                             forceLen=forceLen,
+                             forceType=forceType,
+                             redisplay=redisplay)
         elif forceLen is None and result.lower().startswith("q"):
             print("Alright, done! Taking the current list")
             done = True
