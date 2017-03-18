@@ -24,4 +24,10 @@ struct image_request_t {
   // Pass the final destination along so that the operations layers can
   //  re-publish it on the correct channel
   string dest_channel;
+
+  // xDiff and yDiff can be used to reference X and Y differences between
+  // various values. In calibration the diff is to the first point in the
+  // pentagon, but other things may use this differently
+  int64_t xDiffMM;
+  int64_t yDiffMM;
 }

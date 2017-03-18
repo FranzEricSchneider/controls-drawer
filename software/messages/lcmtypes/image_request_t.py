@@ -10,7 +10,7 @@ except ImportError:
 import struct
 
 class image_request_t(object):
-    __slots__ = ["utime", "action_id", "format", "n_arguments", "arg_names", "arg_values", "name", "dest_channel"]
+    __slots__ = ["utime", "action_id", "format", "n_arguments", "arg_names", "arg_values", "name", "dest_channel", "xDiffMM", "yDiffMM"]
 
     FORMAT_BGR = 1
     FORMAT_GRAY = 2
@@ -24,6 +24,8 @@ class image_request_t(object):
         self.arg_values = []
         self.name = ""
         self.dest_channel = ""
+        self.xDiffMM = 0
+        self.yDiffMM = 0
 
     def encode(self):
         buf = BytesIO()
@@ -51,6 +53,7 @@ class image_request_t(object):
         buf.write(struct.pack('>I', len(__dest_channel_encoded)+1))
         buf.write(__dest_channel_encoded)
         buf.write(b"\0")
+        buf.write(struct.pack(">qq", self.xDiffMM, self.yDiffMM))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -77,13 +80,14 @@ class image_request_t(object):
         self.name = buf.read(__name_len)[:-1].decode('utf-8', 'replace')
         __dest_channel_len = struct.unpack('>I', buf.read(4))[0]
         self.dest_channel = buf.read(__dest_channel_len)[:-1].decode('utf-8', 'replace')
+        self.xDiffMM, self.yDiffMM = struct.unpack(">qq", buf.read(16))
         return self
     _decode_one = staticmethod(_decode_one)
 
     _hash = None
     def _get_hash_recursive(parents):
         if image_request_t in parents: return 0
-        tmphash = (0x684a0c37e134d84e) & 0xffffffffffffffff
+        tmphash = (0xdb97a1aa9c0ddd4a) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

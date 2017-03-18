@@ -12,7 +12,7 @@ import struct
 import lcmtypes.image_request_t
 
 class image_t(object):
-    __slots__ = ["utime", "action_id", "request", "width", "height", "row_stride", "FPS", "brightness", "contrast", "num_data", "data"]
+    __slots__ = ["utime", "action_id", "request", "width", "height", "row_stride", "FPS", "brightness", "contrast", "num_data", "data", "xDiffMM", "yDiffMM"]
 
     def __init__(self):
         self.utime = 0
@@ -26,6 +26,8 @@ class image_t(object):
         self.contrast = 0.0
         self.num_data = 0
         self.data = []
+        self.xDiffMM = 0
+        self.yDiffMM = 0
 
     def encode(self):
         buf = BytesIO()
@@ -39,6 +41,7 @@ class image_t(object):
         self.request._encode_one(buf)
         buf.write(struct.pack(">hhhhffi", self.width, self.height, self.row_stride, self.FPS, self.brightness, self.contrast, self.num_data))
         buf.write(struct.pack('>%dh' % self.num_data, *self.data[:self.num_data]))
+        buf.write(struct.pack(">qq", self.xDiffMM, self.yDiffMM))
 
     def decode(data):
         if hasattr(data, 'read'):
@@ -56,6 +59,7 @@ class image_t(object):
         self.request = lcmtypes.image_request_t._decode_one(buf)
         self.width, self.height, self.row_stride, self.FPS, self.brightness, self.contrast, self.num_data = struct.unpack(">hhhhffi", buf.read(20))
         self.data = struct.unpack('>%dh' % self.num_data, buf.read(self.num_data * 2))
+        self.xDiffMM, self.yDiffMM = struct.unpack(">qq", buf.read(16))
         return self
     _decode_one = staticmethod(_decode_one)
 
@@ -63,7 +67,7 @@ class image_t(object):
     def _get_hash_recursive(parents):
         if image_t in parents: return 0
         newparents = parents + [image_t]
-        tmphash = (0x5a5c6336cf623e9+ lcmtypes.image_request_t._get_hash_recursive(newparents)) & 0xffffffffffffffff
+        tmphash = (0x76e0d5be1599f0ea+ lcmtypes.image_request_t._get_hash_recursive(newparents)) & 0xffffffffffffffff
         tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)

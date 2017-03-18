@@ -7,7 +7,7 @@ from utils.ui import AskAboutLinesToRemove
 from utils.ui import AskAboutPentagonLines
 
 
-img = cv2.imread('frame_SL15_X-10_Y15_1486332586617381.png')
+img = cv2.imread('frame_SL15_X-10_Y10_1489807439296551.png')
 allLines = [[0, 3], [10, 11], [1, 6], [4, 12], [9, 2]]
 
 drawImg = img.copy()
