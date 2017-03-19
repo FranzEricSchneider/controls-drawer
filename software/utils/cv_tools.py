@@ -23,13 +23,19 @@ def calibrationLines(imagePath, threshold1=90, threshold2=100,
     finiteLines = [FiniteLine(line[0]) for line in lines]
     return image, finiteLines
 
+
 def showImage(name, image):
     cv2.namedWindow(name, cv2.WINDOW_AUTOSIZE)
     cv2.startWindowThread()
     cv2.imshow(name, image)
     cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    cv2.destroyWindow(name)
     cv2.waitKey(1)
+
 
 def writeImage(path, frame):
     cv2.imwrite(path, frame)
+
+
+def readImage(path):
+	return cv2.imread(path)

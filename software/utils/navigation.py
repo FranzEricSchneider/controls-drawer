@@ -5,25 +5,25 @@
 import os
 
 
-def baseDirectory():
+def baseDir():
     base = os.environ['CNC_DRAWER_BASE']
     # Throws an error if the directory is invalid
-    return validDirectory(base)
+    return validDir(base)
 
 
-def resultsDirectory():
+def resultsDir():
     results = os.environ['CNC_DRAWER_RESULTS']
     # Throws an error if the directory is invalid
-    return validDirectory(results)
+    return validDir(results)
 
 
-def softwareDirectory():
+def softwareDir():
     software = os.environ['CNC_DRAWER_SOFTWARE']
     # Throws an error if the directory is invalid
-    return validDirectory(software)
+    return validDir(software)
 
 
-def validDirectory(directory):
+def validDir(directory):
     if not os.path.isdir(directory):
         raise OSError("Hey! {} isn't a directory!".format(directory))
     if not os.access(directory, os.R_OK):
