@@ -97,11 +97,7 @@ class ExteriorCameraCalibration():
             if self.frame is None:
                 print("Never ended up getting an image!")
             else:
-                import cv2
-                # Display the frame for funsies
-                cv2.imshow("frame", self.frame)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                cvtools.showImage("frame", self.frame)
 
             # Travel back to the starting spot
             reversePosMsg = lcm_msgs.auto_instantiate(self.posCmdChannel)
