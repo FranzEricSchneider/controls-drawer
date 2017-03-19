@@ -50,9 +50,8 @@ def cameraCalibration(args):
     for imagePath in imagePaths:
         # Runs the pentagon finding code IF there is no metadata file OR if the
         # args decree it
+        metadata = getMetadata(imagePath)
         imageName = path.basename(imagePath)
-        metadata = path.join(folder,
-                             "pentagon_" + imageName.replace("png", "json"))
         if not path.isfile(metadata) or args.run_pentagon_finding:
             print("Finding pentagon in {}".format(imageName))
 
@@ -127,6 +126,35 @@ def cameraCalibration(args):
                 cv2.circle(image, center, radius=6, thickness=2,
                            color=(204, 255, 0))
             cv_tools.showImage(metadata, image)
+
+    # Time to take the pixel vertex values, real world displacement values, and
+    # combine them into a transformation from tooltip to camera. Check out
+    # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
+    # behind this part
+    vertices, exteriorPts = getCalibPoints(imagePaths)
+    focus = 1  # TODO: What is the focus for the camera? What units?
+    X = np.zeros((2 * len(vertices), 12))
+
+
+def getCalibPoints(imagePaths):
+    for imagePath in imagePaths:
+        metadata = getMetadata(imagePath)
+        imageName = path.basename(imagePath)
+
+        # Get vertices from the metadata
+        with open(metadata, 'r') as infile:
+            data = json.load(infile)
+
+        # Parse tooltip data out of the image name
+        sideLength =
+        x =
+        y =
+
+
+def getMetadata(imagePath):
+    imageName = path.basename(imagePath)
+    fileName = "pentagon_" + imageName.replace("png", "json")
+    return imagePath.replace(imageName, fileName)
 
 
 if __name__ == "__main__":
