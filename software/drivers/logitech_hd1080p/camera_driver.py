@@ -23,6 +23,8 @@ class CameraDriver():
         self.contrast = args.contrast
         self.outputChannel = args.output_channel
 
+        # TODO: Extract the calibration parameters here and undistort image
+
         self.videoCapture = setup(args)
         self.frame = None
         self.lcmobj = lcm.LCM()
