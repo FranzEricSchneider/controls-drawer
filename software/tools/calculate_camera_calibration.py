@@ -95,7 +95,7 @@ def cameraCalibration(args):
 
             # Write the lines/vertices data to file
             data = {"vertices": [list(vertex) for vertex in vertices]}
-            with open(metadata, 'w') as outfile:
+            with open(metadata, "w") as outfile:
                 json.dump(data, outfile)
             print("Wrote vertices to {}".format(metadata))
 
@@ -117,7 +117,7 @@ def cameraCalibration(args):
 
             # Read in image and point data
             image = cv_tools.readImage(imagePath)
-            with open(metadata, 'r') as infile:
+            with open(metadata, "r") as infile:
                 data = json.load(infile)
 
             # Plot and show those vertices
@@ -133,25 +133,69 @@ def cameraCalibration(args):
     # behind this part
     vertices, exteriorPts = getCalibPoints(imagePaths)
     focus = 1  # TODO: What is the focus for the camera? What units?
+    # TODO: Look in test_calibration.py and at the tutorials and decide on f
     X = np.zeros((2 * len(vertices), 12))
+    Y = np.zeros((2 * len(vertices), 1))
 
 
 def getCalibPoints(imagePaths):
+    """
+    Assuming the pentagon points have been extracted from the given images,
+    returns the point locations in pixel and exterior coordinates
+
+    Inputs:
+        imagePaths: A list of paths to images with extracted pentagons
+
+    Outputs:
+        vertices: An nx2 array of all pentagon points in pixel coordinates
+        exteriorPts: An nx3 array of all pentagon points in exterior (tooltip)
+                     coordinates, the reference frame that we want to relate to
+                     the camera
+    """
+
+    vertices = []
+    exteriorPts = []
+
     for imagePath in imagePaths:
         metadata = getMetadata(imagePath)
         imageName = path.basename(imagePath)
 
         # Get vertices from the metadata
-        with open(metadata, 'r') as infile:
+        with open(metadata, "r") as infile:
             data = json.load(infile)
+        vertices.extend(data["vertices"])
 
         # Parse tooltip data out of the image name
-        sideLength =
-        x =
-        y =
+        imageNameSplit = imageName.lower().split("_")
+        sideLength = None
+        x = None
+        y = None
+        for part in imageNameSplit:
+            if part.startswith("sl")
+                # Length of pentagon side, in meters
+                sideLength = float(part.replace("sl", "")) / 1000
+            if part.startswith("x")
+                # X travel from 1st point to image point, in meters
+                x = float(part.replace("x", "")) / 1000
+            if part.startswith("y")
+                # Y travel from 1st point to image point, in meters
+                y = float(part.replace("y", "")) / 1000
+        if sideLength is None or x is None or y is None:
+            raise ValueError("Image {} lacks data".format(imageName))
+
+        # Solve for the pentagon points in the exterior frame
+        pentagonVectors = planar.polygonVectors(5)
+        pointsFromCamera = pentagonVectors * sideLength - np.array([x, y, 0])
+        exteriorPts.extend(list(pointsFromCamera))
+
+    return (vertices, exteriorPts)
 
 
 def getMetadata(imagePath):
+    """
+    Takes an image name and returns the name of the file that contains the
+    pentagon point data
+    """
     imageName = path.basename(imagePath)
     fileName = "pentagon_" + imageName.replace("png", "json")
     return imagePath.replace(imageName, fileName)

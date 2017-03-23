@@ -14,9 +14,9 @@ CBCOL = 6
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
+# prepare object points, like (0, 0, 0), (1, 0, 0), (2, 0, 0) ...., (6, 5, 0)
 objp = np.zeros((CBCOL * CBROW, 3), np.float32)
-objp[:,:2] = np.mgrid[0:CBROW, 0:CBCOL].T.reshape(-1, 2)
+objp[:, :2] = np.mgrid[0:CBROW, 0:CBCOL].T.reshape(-1, 2)
 
 # Arrays to store object points and image points from all the images.
 objpoints = [] # 3d point in real world space
@@ -27,7 +27,7 @@ images = glob.glob('square_images/*.jpg')
 import ipdb; ipdb.set_trace()
 for fname in images:
     img = cv2.imread(fname)
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # Find the chess board corners
     ret, corners = cv2.findChessboardCorners(gray, (CBROW, CBCOL), None)
@@ -47,6 +47,7 @@ for fname in images:
         print("File {} pattern not found!".format(fname))
 
 cv2.destroyAllWindows()
+
 
 # Part 2
 import ipdb; ipdb.set_trace()
@@ -73,6 +74,7 @@ for fname in images:
     dstCrop = dst[y:y + h, x:x + w]
     cv2.imwrite('{}_calib.png'.format(fname.replace(".jpg", "")), dstCrop)
     cv2.imwrite('{}_calib_nocrop.png'.format(fname.replace(".jpg", "")), dst)
+
 
 # Part 5
 import ipdb; ipdb.set_trace()
