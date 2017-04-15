@@ -2,7 +2,6 @@ import argparse
 import cv2
 import lcm
 import numpy as np
-import select
 import time
 
 from utils import lcm_msgs
