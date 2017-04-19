@@ -1,7 +1,9 @@
 import argparse
 import cv2
+import glob
 import lcm
 import numpy as np
+import pickle
 import time
 
 from utils import lcm_msgs
@@ -11,12 +13,33 @@ class CameraDriver():
     def __init__(self, args):
 
         self.outputChannel = args.output_channel
-
-        # TODO: Extract the calibration parameters here and undistort image
-
         self.videoCapture = self.setup(args)
         self.frame = None
         self.lcmobj = lcm.LCM()
+
+        # Get all calibration files and use the latest to get the data
+        # returned by internal calibration
+        # NOTE: See drivers/general_camera_tests/test_calibration.py for
+        #       explanations about these variables
+        calibrationFiles = glob.glob("calibration_results*.pickle")
+        calibrationResults = pickle.load(open(calibrationFiles[-1], "rb"))
+        self.retval = calibrationResults["retval"]
+        self.matrix = calibrationResults["matrix"]
+        self.distCoeffs = calibrationResults["distCoeffs"]
+        self.rvecs = calibrationResults["rvecs"]
+        self.tvecs = calibrationResults["tvecs"]
+        self.newCameraMatrix, self.roi = cv2.getOptimalNewCameraMatrix(
+            cameraMatrix=self.matrix,
+            distCoeffs=self.distCoeffs,
+            imageSize=(int(self.width), int(self.height)),
+            alpha=1,
+            newImgSize=(int(self.width), int(self.height))
+        )
+        # Overwrite the camera's width and height with the ROI width/height,
+        # b/c that will be the final output
+        self.width = self.roi[2]
+        self.height = self.roi[3]
+
         self.requestSub = self.lcmobj.subscribe(args.request_channel,
                                                 self.handleRequest)
 
@@ -36,7 +59,13 @@ class CameraDriver():
         print("Got image request!")
 
         # Grab the most recent image
-        frame = self.frame
+        rawFrame = self.frame
+        # Undistort the image re: internal calibration
+        undistortedFrame = cv2.undistort(rawFrame, self.matrix, self.distCoeffs,
+                                         None, self.newCameraMatrix)
+        # Crop the undistorted image
+        x, y, w, h = self.roi
+        frame = undistortedFrame[y:y + h, x:x + w]
         # Create the basic msg variables
         inMsg = lcm_msgs.auto_decode(channel, data)
         outMsg = lcm_msgs.auto_instantiate(self.outputChannel)

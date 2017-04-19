@@ -15,6 +15,8 @@ CBCOL = 6
 
 
 # termination criteria
+# 30 = max number of iterations
+# 0.001 = min accuracy
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
 # prepare object points, like (0, 0, 0), (1, 0, 0), (2, 0, 0) ...., (6, 5, 0)
@@ -25,7 +27,7 @@ objp[:, :2] = np.mgrid[0:CBROW, 0:CBCOL].T.reshape(-1, 2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('square_images/*.jpg')
+images = glob.glob('../crenova_iscope_endoscope_2Mpix/square_images/*.jpg')
 
 import ipdb; ipdb.set_trace()
 for fname in images:
@@ -42,10 +44,10 @@ for fname in images:
         corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
         imgpoints.append(corners2)
 
-        # # Draw and display the corners
-        # img = cv2.drawChessboardCorners(img, (CBROW, CBCOL), corners2, ret)
-        # cv2.imshow('img'.format(fname), img)
-        # cv2.waitKey(500)
+        # Draw and display the corners
+        img = cv2.drawChessboardCorners(img, (CBROW, CBCOL), corners2, ret)
+        cv2.imshow('img'.format(fname), img)
+        cv2.waitKey(500)
     else:
         print("File {} pattern not found!".format(fname))
 
