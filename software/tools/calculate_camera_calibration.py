@@ -171,13 +171,13 @@ def getCalibPoints(imagePaths):
         x = None
         y = None
         for part in imageNameSplit:
-            if part.startswith("sl")
+            if part.startswith("sl"):
                 # Length of pentagon side, in meters
                 sideLength = float(part.replace("sl", "")) / 1000
-            if part.startswith("x")
+            if part.startswith("x"):
                 # X travel from 1st point to image point, in meters
                 x = float(part.replace("x", "")) / 1000
-            if part.startswith("y")
+            if part.startswith("y"):
                 # Y travel from 1st point to image point, in meters
                 y = float(part.replace("y", "")) / 1000
         if sideLength is None or x is None or y is None:
