@@ -20,8 +20,8 @@ POLYGON_DEGREE = 5
 # Polygon side length in meters
 SIDE_LENGTH = 0.015
 # Point around which to take a pictures from
-PICTURE_POSITION = [-0.005, 0.008]
-JITTER = [0.015, 0.018]
+PICTURE_POSITION = [-0.01, 0.008]
+JITTER = [0.022, 0.015]
 
 
 class ExteriorCameraCalibration():
@@ -64,21 +64,21 @@ class ExteriorCameraCalibration():
             posMsg.velocity = TRAVEL_SPEED
             posMsg.position = imagingPosition
             self.lcmobj.publish(self.posCmdChannel, posMsg.encode())
+            # Alow time for system to start moving
+            time.sleep(5.0)
 
             # Wait until the system is stopped - the loop sleep is long enough
             #   to capture tool head movement
             self.systemStopped = False
             self.lastMsg = None
-            while not self.systemStopped:
-                # Waits to handle message until timeout, then loops
-                lcm_msgs.lcmobj_handle_msg(self.lcmobj, timeout=0.05)
-                # Sleep for 0.1 seconds to make sure TOOL_STATE changes if the
-                #   head is actually moving
-                time.sleep(0.1)
+            # while not self.systemStopped:
+            #     # Waits to handle message until timeout, then loops
+            #     lcm_msgs.lcmobj_handle_msg(self.lcmobj, timeout=0.05)
+            #     # Sleep for 0.1 seconds to make sure TOOL_STATE changes if the
+            #     #   head is actually moving
+            #     time.sleep(0.1)
 
-            # Wait for camera to focus, then take a picture
-            print("Waiting for camera to focus (hopefully)")
-            time.sleep(5.0)
+            # Take a picture
             imReqMsg = lcm_msgs.auto_instantiate(self.imageReqChannel)
             imReqMsg.format = imReqMsg.FORMAT_GRAY
             imReqMsg.name = self.__class__.__name__
@@ -97,13 +97,14 @@ class ExteriorCameraCalibration():
             if self.frame is None:
                 print("Never ended up getting an image!")
             else:
-                cvtools.showImage("frame", self.frame)
+                print("Got image")
 
             # Travel back to the starting spot
             reversePosMsg = lcm_msgs.auto_instantiate(self.posCmdChannel)
             reversePosMsg.velocity = TRAVEL_SPEED
             reversePosMsg.position = [-p for p in imagingPosition]
             self.lcmobj.publish(self.posCmdChannel, reversePosMsg.encode())
+            time.sleep(5.0)
 
     def onToolState(self, channel, data):
         msg = lcm_msgs.auto_decode(channel, data)
