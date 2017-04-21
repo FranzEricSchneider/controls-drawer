@@ -132,6 +132,11 @@ def cameraCalibration(args):
     # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
     # behind this part
     vertices, exteriorPts = getCalibPoints(imagePaths)
+    # Get the interior camera calibration data to get a number for focal length
+    # TODO: Put this functionality in util.navigation
+    #calibrationFiles = glob.glob(path.join(navigation.softwareDir() +\
+    #                                       "calibration_results*.pickle"))
+    #calibrationResults = pickle.load(open(calibrationFiles[-1], "rb"))
     focus = 1  # TODO: What is the focus for the camera? What units?
     # TODO: Look in test_calibration.py and at the tutorials and decide on f
     X = np.zeros((2 * len(vertices), 12))
