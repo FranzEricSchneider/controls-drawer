@@ -161,7 +161,11 @@ def cameraCalibration(args):
     Y = np.zeros((lenVertices, 1))
     B = np.linalg.lstsq(X, Y)
     # Why is the solution always zeros?
+    # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
+    #   inverted. Why?
     import ipdb; ipdb.set_trace()
+    xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
+    bByHand = xPart.dot(Y)
 
 
 def getCalibPoints(imagePaths):
