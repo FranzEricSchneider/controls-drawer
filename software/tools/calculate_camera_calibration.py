@@ -8,6 +8,7 @@ from glob import glob
 import json
 import numpy as np
 from os import path
+import pickle
 
 from geometry import planar
 from utils import cv_tools
@@ -133,14 +134,34 @@ def cameraCalibration(args):
     # behind this part
     vertices, exteriorPts = getCalibPoints(imagePaths)
     # Get the interior camera calibration data to get a number for focal length
-    # TODO: Put this functionality in util.navigation
-    #calibrationFiles = glob.glob(path.join(navigation.softwareDir() +\
-    #                                       "calibration_results*.pickle"))
-    #calibrationResults = pickle.load(open(calibrationFiles[-1], "rb"))
-    focus = 1  # TODO: What is the focus for the camera? What units?
-    # TODO: Look in test_calibration.py and at the tutorials and decide on f
-    X = np.zeros((2 * len(vertices), 12))
-    Y = np.zeros((2 * len(vertices), 1))
+    calibrationResults = pickle.load(
+        open(navigation.getLatestIntrinsicCalibration(), "rb"))
+    focalX = calibrationResults['matrix'][0, 0]
+    focalY = calibrationResults['matrix'][1, 1]
+    # Take the average of x and y, they are already almost equal
+    f = (focalX + focalY) / 2.0
+    # The X matrix takes certain values in certain places, see sharelatex for
+    #   the details
+    lenVertices = len(vertices)
+    X = np.zeros((lenVertices, 12))
+    for i in xrange(lenVertices):
+        X[i, 0] = -f * exteriorPts[i][0]
+        X[i, 1] = -f * exteriorPts[i][1]
+        X[i, 2] = -f * exteriorPts[i][2]
+        X[i, 3] = -f
+        X[i, 4] = f * exteriorPts[i][0]
+        X[i, 5] = f * exteriorPts[i][1]
+        X[i, 6] = f * exteriorPts[i][1]
+        X[i, 7] = f
+        X[i, 8] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][0]
+        X[i, 9] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][1]
+        X[i, 10] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][2]
+        X[i, 11] = (vertices[i][0] - vertices[i][1])
+    # The Y matrix is all zeros, see sharelatex for why
+    Y = np.zeros((lenVertices, 1))
+    B = np.linalg.lstsq(X, Y)
+    # Why is the solution always zeros?
+    import ipdb; ipdb.set_trace()
 
 
 def getCalibPoints(imagePaths):

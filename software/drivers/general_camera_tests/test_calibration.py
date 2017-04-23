@@ -92,7 +92,7 @@ calibrationResults = {
 }
 now = lcm_msgs.utime_now()
 pickle.dump(calibrationResults,
-            open("calibration_results_{}.pickle".format(now), "wb"))
+            open("intrinsic_calibration_results_{}.pickle".format(now), "wb"))
 
 
 # Part 3

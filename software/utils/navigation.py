@@ -3,6 +3,7 @@
 ###############################################################################
 
 import os
+import glob
 
 
 def baseDir():
@@ -29,3 +30,11 @@ def validDir(directory):
     if not os.access(directory, os.R_OK):
         raise OSError("Hey! Can't read {} directory".format(directory))
     return directory
+
+
+def getLatestIntrinsicCalibration():
+    searchString = os.path.join(
+        softwareDir(),
+        "drivers/crenova_iscope_endoscope_2Mpix/intrinsic*.pickle"
+    )
+    return glob.glob(searchString)[-1]

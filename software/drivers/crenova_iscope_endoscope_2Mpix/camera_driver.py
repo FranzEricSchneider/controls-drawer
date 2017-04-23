@@ -7,6 +7,7 @@ import pickle
 import time
 
 from utils import lcm_msgs
+from utils import navigation
 
 
 class CameraDriver():
@@ -21,8 +22,8 @@ class CameraDriver():
         # returned by internal calibration
         # NOTE: See drivers/general_camera_tests/test_calibration.py for
         #       explanations about these variables
-        calibrationFiles = glob.glob("calibration_results*.pickle")
-        calibrationResults = pickle.load(open(calibrationFiles[-1], "rb"))
+        calibrationResults = pickle.load(
+            open(navigation.getLatestIntrinsicCalibration(), "rb"))
         self.retval = calibrationResults["retval"]
         self.matrix = calibrationResults["matrix"]
         self.distCoeffs = calibrationResults["distCoeffs"]
