@@ -11,6 +11,7 @@ KNOWN_MESSAGES = {
     'IMAGE_RAW' : lcmtypes.image_t,
     'POSITION_COMMAND' : lcmtypes.relative_position_t,
     'REQUEST_IMAGE' : lcmtypes.image_request_t,
+    'TABLE_STATE' : lcmtypes.table_state_t,
     'TOOL_STATE' : lcmtypes.tool_state_t,
 }
 
