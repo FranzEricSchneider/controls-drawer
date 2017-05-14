@@ -7,5 +7,5 @@ from .image_t import image_t
 from .image_request_t import image_request_t
 from .relative_position_t import relative_position_t
 from .tool_state_t import tool_state_t
-from .lcm_velocity_t import lcm_velocity_t
 from .table_state_t import table_state_t
+from .lcm_velocity_t import lcm_velocity_t
