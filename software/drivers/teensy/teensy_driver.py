@@ -9,13 +9,19 @@ from utils import lcm_msgs
 # Maps the index of the printed data to variable name. The variable names are
 # left out of the printed line to save superfluous printing
 DATA_MAPPING = {
-    0: "low_limit_switch_x",
-    1: "high_limit_switch_x",
-    2: "low_limit_switch_y",
-    3: "high_limit_switch_y",
-    4: "encoder_x",
-    5: "encoder_y",
+    "low_limit_switch_x": 0,
+    "high_limit_switch_x": 1,
+    "low_limit_switch_y": 2,
+    "high_limit_switch_y": 3,
+    "encoder_x": 4,
+    "encoder_y": 5,
 }
+
+# Store the scale factor from encoder counts to X and Y meters travelled in X
+# and Y. This lumps (counts to radians) and (radians to meters) into the same
+# number
+X_ENCODER_TO_METERS = 1e-5
+Y_ENCODER_TO_METERS = 1e-5
 
 
 def teensyDriver(args):
@@ -23,11 +29,16 @@ def teensyDriver(args):
     port = serial.Serial(args.port, args.baud_rate)
 
     lastReadTime = time.time()
+
+    # Store whether we've touched the X and Y lower limits by storing the
+    # encoder count there
+    lowLimitXPosition = None
+    lowLimitYPosition = None
+
     while abs(time.time() - lastReadTime) < args.timeout:
         # Read the line and mark the time
         line = port.readline().strip()
         lastReadTime = time.time()
-
         # Parse the line into data chunks. They should all be ints and floats.
         # Then check that we have the right amount of data
         data = [eval(number) for number in line.split(",")]
@@ -36,12 +47,31 @@ def teensyDriver(args):
 
         # Pack the raw information into the message
         msg = lcm_msgs.auto_instantiate(args.channel)
-        for idx, variable in DATA_MAPPING.items():
+        for variable, idx in DATA_MAPPING.items():
             setattr(msg, variable, data[idx])
 
-        # Calculate the remaining information in the message
-        msg.tool_frame = np.eye(4)
-        msg.camera_frame = np.eye(4)
+        # Check if the X or Y lower limit switches were touched. If so, update
+        # the lower limit encoder counts
+        if data[DATA_MAPPING["low_limit_switch_x"]] == False:
+            lowLimitXPosition = data[DATA_MAPPING["encoder_x"]]
+        if data[DATA_MAPPING["low_limit_switch_y"]] == False:
+            lowLimitYPosition = data[DATA_MAPPING["encoder_y"]]
+
+        # Calculate the remaining information in the message if we've touched
+        # off on the limit switches
+        if lowLimitXPosition is None or lowLimitYPosition is None:
+            msg.tool_frame = np.eye(4)
+            msg.camera_frame = np.eye(4)
+        else:
+            msg.tool_frame = np.eye(4)
+            xDiff = data[DATA_MAPPING["encoder_x"]] - lowLimitXPosition
+            xPosition = X_ENCODER_TO_METERS * xDiff
+            yDiff = data[DATA_MAPPING["encoder_y"]] - lowLimitYPosition
+            yPosition = Y_ENCODER_TO_METERS * yDiff
+            msg.tool_frame[0, 3] = xPosition
+            msg.tool_frame[1, 3] = yPosition
+            # I don't yet know how to calculate this
+            msg.camera_frame = np.eye(4)
 
         # Publish the message
         lcmobj.publish(args.channel, msg.encode())
