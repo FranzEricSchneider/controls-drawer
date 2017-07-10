@@ -11,6 +11,7 @@ from os import path
 import pickle
 
 from geometry import planar
+from partial_derivatives import matrix_row, function1, function2
 from utils import cv_tools
 from utils import navigation
 from utils import ui
@@ -140,32 +141,8 @@ def cameraCalibration(args):
     focalY = calibrationResults['matrix'][1, 1]
     # Take the average of x and y, they are already almost equal
     f = (focalX + focalY) / 2.0
-    # The X matrix takes certain values in certain places, see sharelatex for
-    #   the details
-    lenVertices = len(vertices)
-    X = np.zeros((lenVertices, 12))
-    for i in xrange(lenVertices):
-        X[i, 0] = -f * exteriorPts[i][0]
-        X[i, 1] = -f * exteriorPts[i][1]
-        X[i, 2] = -f * exteriorPts[i][2]
-        X[i, 3] = -f
-        X[i, 4] = f * exteriorPts[i][0]
-        X[i, 5] = f * exteriorPts[i][1]
-        X[i, 6] = f * exteriorPts[i][1]
-        X[i, 7] = f
-        X[i, 8] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][0]
-        X[i, 9] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][1]
-        X[i, 10] = (vertices[i][0] - vertices[i][1]) * exteriorPts[i][2]
-        X[i, 11] = (vertices[i][0] - vertices[i][1])
-    # The Y matrix is all zeros, see sharelatex for why
-    Y = np.zeros((lenVertices, 1))
-    B = np.linalg.lstsq(X, Y)
-    # Why is the solution always zeros?
-    # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
-    #   inverted. Why?
-    import ipdb; ipdb.set_trace()
-    xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
-    bByHand = xPart.dot(Y)
+
+    B = nonLinearLeastSquares(f, vertices, exteriorPts)
 
 
 def getCalibPoints(imagePaths):
@@ -215,7 +192,10 @@ def getCalibPoints(imagePaths):
 
         # Solve for the pentagon points in the exterior frame
         pentagonVectors = planar.polygonVectors(5)
-        pointsFromCamera = pentagonVectors * sideLength - np.array([x, y, 0])
+        from random import random
+        pointsFromCamera = pentagonVectors * sideLength - np.array([x, y, 0.0])
+        for line in pointsFromCamera:
+            line[-1] += (random() - 0.5) * 0.002
         exteriorPts.extend(list(pointsFromCamera))
 
     return (vertices, exteriorPts)
@@ -229,6 +209,81 @@ def getMetadata(imagePath):
     imageName = path.basename(imagePath)
     fileName = "pentagon_" + imageName.replace("png", "json")
     return imagePath.replace(imageName, fileName)
+
+
+def nonLinearLeastSquares(f, vertices, exteriorPts):
+    lenVertices = len(vertices)
+
+    # Choose initial values for everything: TODO STILL TOTALLY GUESSES
+    phi = 3.0
+    omega = 0.1
+    kappa = 0.05
+    s_14 = 0.02
+    s_24 = 0.01
+    s_34 = 0.04
+
+    # Loop through every measurement point
+    # TODO instantiate A and beta
+    for i in xrange(lenVertices):
+        x_1 = exteriorPts[i][0]
+        x_2 = exteriorPts[i][1]
+        x_3 = exteriorPts[i][2]
+
+        # y1 and y2 are the "measured output" variables
+        y1 = vertices[i][0] / f
+        y2 = vertices[i][1] / f
+
+        # Calculate current residuals
+        newB = np.array([
+            [y1 - function1(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)],
+            [y2 - function2(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)],
+        ])
+
+        newA = matrix_row(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)
+        # TODO build up a full A and beta
+
+    # TODO Make another loop to use A and beta to change the lambda values
+
+
+def linearLeastSquares(vertices, exteriorPts):
+    # The X matrix takes certain values in certain places, see sharelatex for
+    #   the details
+    lenVertices = len(vertices)
+    X = np.zeros((lenVertices, 12))
+    for i in xrange(lenVertices):
+        X[i, 0] = -f / vertices[i][0] * exteriorPts[i][0]
+        X[i, 1] = -f / vertices[i][0] * exteriorPts[i][1]
+        X[i, 2] = -f / vertices[i][0] * exteriorPts[i][2]       # ZERO
+        X[i, 3] = -f / vertices[i][0]
+        X[i, 4] = f * exteriorPts[i][0]
+        X[i, 5] = f * exteriorPts[i][1]
+        X[i, 6] = f * exteriorPts[i][2]
+        X[i, 7] = f
+        X[i, 8] = (1 - vertices[i][1]) * exteriorPts[i][0]
+        X[i, 9] = (1 - vertices[i][1]) * exteriorPts[i][1]
+        X[i, 10] = (1 - vertices[i][1]) * exteriorPts[i][2]     # ZERO
+        X[i, 11] = (1 - vertices[i][1])
+    # The Y matrix is all zeros, see sharelatex for why
+    Y = np.zeros((lenVertices, 1))
+    B = np.linalg.lstsq(X, Y)
+    # Why is the solution always zeros?
+    # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
+    #   inverted. Why?
+    # The big damn problem is that X.T.dot(X) cannot be inverted if its cols
+    #   are linearly Dependent, and that will happen in this case if X has cols
+    #   that are linearly Dependent. Try it out in wolfram to see. Basically
+    #   one X column is swept down X.T and then the negative of that is, and so
+    #   the two resulting columns are just a negative off.
+    def slicer(idx):
+        return np.array([False if i in idx else True for i in range(12)])
+    print  X[:, slicer([0, 1, 4, 5, 8, 9])].shape
+    print  np.linalg.matrix_rank(X[:, slicer([0, 1, 4, 5, 8, 9])])
+    import ipdb; ipdb.set_trace()
+    xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
+    bByHand = xPart.dot(Y)
+    # As of 07/09/2017 when this was put here the linear least squares method
+    # was totally fizzled and I turned to the non-linear method
+    return None
 
 
 if __name__ == "__main__":
