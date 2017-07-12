@@ -11,8 +11,9 @@ from os import path
 import pickle
 
 from geometry import planar
-from partial_derivatives import matrix_row, function1, function2
+from free_parameter_tools import matrix_row, function1, function2, HT_from_parameters
 from utils import cv_tools
+from utils import geometry_tools
 from utils import navigation
 from utils import ui
 
@@ -129,6 +130,9 @@ def cameraCalibration(args):
                            color=(204, 255, 0))
             cv_tools.showImage(metadata, image)
 
+        else:
+            print("Found file containing point pairs for {}".format(imageName))
+
     # Time to take the pixel vertex values, real world displacement values, and
     # combine them into a transformation from tooltip to camera. Check out
     # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
@@ -142,7 +146,11 @@ def cameraCalibration(args):
     # Take the average of x and y, they are already almost equal
     f = (focalX + focalY) / 2.0
 
-    B = nonLinearLeastSquares(f, vertices, exteriorPts)
+    # Calculate the 6 free parameters that make up a homogeneous transform,
+    # three Euler angles and three translation distances
+    freeParameters = nonLinearLeastSquares(f, vertices, exteriorPts)
+    HT = HT_from_parameters(freeParameters)
+    geometry_tools.checkOrthonormal(HT)
 
 
 def getCalibPoints(imagePaths):
@@ -211,38 +219,71 @@ def getMetadata(imagePath):
     return imagePath.replace(imageName, fileName)
 
 
-def nonLinearLeastSquares(f, vertices, exteriorPts):
-    lenVertices = len(vertices)
+def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
+    # Method and many of the more meaningless names taken from here:
+    # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
-    # Choose initial values for everything: TODO STILL TOTALLY GUESSES
+    # Choose initial values for the free parameters
     phi = 3.0
     omega = 0.1
     kappa = 0.05
     s_14 = 0.02
     s_24 = 0.01
     s_34 = 0.04
+    # Track the parameters over time in a matrix, use the latest values to
+    # calculate each consecutive step
+    freeParameters = np.array([phi, omega, kappa, s_14, s_24, s_34]).reshape(6, 1)
 
-    # Loop through every measurement point
-    # TODO instantiate A and beta
-    for i in xrange(lenVertices):
-        x_1 = exteriorPts[i][0]
-        x_2 = exteriorPts[i][1]
-        x_3 = exteriorPts[i][2]
+    # TODO: Make this for loop a combination of delta resolution and maximum
+    #       iterations
+    for i in range(10):
+        # Loop through every measurement point
+        residuals = None
+        AMatrix = None
+        for i in xrange(len(vertices)):
+            x_1 = exteriorPts[i][0]
+            x_2 = exteriorPts[i][1]
+            x_3 = exteriorPts[i][2]
 
-        # y1 and y2 are the "measured output" variables
-        y1 = vertices[i][0] / f
-        y2 = vertices[i][1] / f
+            # y1 and y2 are the "measured output" variables
+            y1 = vertices[i][0] / f
+            y2 = vertices[i][1] / f
 
-        # Calculate current residuals
-        newB = np.array([
-            [y1 - function1(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)],
-            [y2 - function2(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)],
-        ])
+            # Calculate current residuals
+            newResiduals = np.array([
+                [y1 - function1(freeParameters[:, -1], x_1, x_2, x_3)],
+                [y2 - function2(freeParameters[:, -1], x_1, x_2, x_3)],
+            ])
+            if residuals is None:
+                residuals = newResiduals
+            else:
+                residuals = np.vstack((residuals, newResiduals))
 
-        newA = matrix_row(phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34)
-        # TODO build up a full A and beta
+            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3)
+            if AMatrix is None:
+                AMatrix = newAMatrix
+            else:
+                AMatrix = np.vstack((AMatrix, newAMatrix))
 
-    # TODO Make another loop to use A and beta to change the lambda values
+        # I know the names don't mean anything, see Wolfram link
+        aMatrix = AMatrix.T.dot(AMatrix)
+        bMatrix = AMatrix.T.dot(residuals)
+        deltaFreeParameters = np.linalg.solve(aMatrix, bMatrix)
+        freeParameters = np.hstack((freeParameters,
+                                    freeParameters[:, -1].reshape(6, 1) + deltaFreeParameters))
+
+    if plotValues:
+        import matplotlib.pyplot as plt
+        titles = ["phi", "omega", "kappa", "s_14", "s_24", "s_34"]
+        for i in range(6):
+            plt.subplot(3, 2, i + 1)
+            plt.plot(freeParameters[i, :], "o-")
+            plt.title(titles[i])
+        plt.xlabel("Iterations")
+        plt.show()
+
+    # Return the best guess (most settled) values for the parameters
+    return freeParameters[:, -1]
 
 
 def linearLeastSquares(vertices, exteriorPts):
@@ -278,7 +319,6 @@ def linearLeastSquares(vertices, exteriorPts):
         return np.array([False if i in idx else True for i in range(12)])
     print  X[:, slicer([0, 1, 4, 5, 8, 9])].shape
     print  np.linalg.matrix_rank(X[:, slicer([0, 1, 4, 5, 8, 9])])
-    import ipdb; ipdb.set_trace()
     xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
     bByHand = xPart.dot(Y)
     # As of 07/09/2017 when this was put here the linear least squares method
