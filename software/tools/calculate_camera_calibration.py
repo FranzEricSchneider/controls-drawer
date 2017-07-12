@@ -19,36 +19,36 @@ from utils import ui
 
 
 def cameraCalibration(args):
-    # Finds the folder with the calibration images
-    if args.folder_name is None:
-        # If you aren't given a folder, check all the calibration image folders
-        # in the results directory
+    # Finds the directory with the calibration images
+    if args.directory_name is None:
+        # If you aren't given a directory, check all the calibration image
+        # directories in the results directory
         resultsDirectory = navigation.resultsDir()
         imageDirectory = path.join(resultsDirectory, "calibration_images")
         searchString = path.join(imageDirectory, "frames*")
         # Sort the directories - because the names should be identical except
-        # for the utime (folder name should be 'frames_utime') this will put
-        # the most recently made folders last
+        # for the utime (directory_name name should be 'frames_utime') this will put
+        # the most recently made directories last
         possibleDirectories = sorted(glob(searchString))
-        # Check that there are valid folders
+        # Check that there are valid directories
         if len(possibleDirectories) < 1:
             raise RuntimeError("There are no calibration directories")
-        # Set the oldest folder as the designated one
-        folder = possibleDirectories[-1]
-    elif args.folder_name.startswith("/home"):
+        # Set the oldest directory as the designated one
+        directory = possibleDirectories[-1]
+    elif args.directory_name.startswith("/home"):
         # Check and see if the path is global
-        folder = navigation.validDir(args.folder_name)
+        directory = navigation.validDir(args.directory_name)
     else:
         # Check if the path is in results/calibration_images/
         resultsDirectory = navigation.resultsDir()
         imageDirectory = path.join(resultsDirectory, "calibration_images")
-        folder = navigation.validDir(path.join(imageDirectory,
-                                               args.folder_name))
+        directory = navigation.validDir(path.join(imageDirectory,
+                                               args.directory_name))
 
     # Find the images that we want to run this on
-    imagePaths = glob(path.join(folder, "*.png"))
+    imagePaths = glob(path.join(directory, "*.png"))
     if len(imagePaths) < 1:
-        raise RuntimeError("No images in folder {}".format(folder))
+        raise RuntimeError("No images in directory {}".format(directory))
 
     for imagePath in imagePaths:
         # Runs the pentagon finding code IF there is no metadata file OR if the
@@ -103,7 +103,7 @@ def cameraCalibration(args):
             print("Wrote vertices to {}".format(metadata))
 
             # Plot the final pentagon if desired
-            if args.plot_results:
+            if args.plot_pentagon_results:
                 finalImage = image.copy()
                 for line in midInfiniteLines:
                     line.onImage(finalImage, thickness=1)
@@ -115,7 +115,7 @@ def cameraCalibration(args):
                                color=(204, 255, 0))
                 cv_tools.showImage(metadata, finalImage)
 
-        elif args.plot_results:
+        elif args.plot_pentagon_results:
             print("Displaying pre-found pentagon {}".format(imageName))
 
             # Read in image and point data
@@ -144,13 +144,37 @@ def cameraCalibration(args):
     focalX = calibrationResults['matrix'][0, 0]
     focalY = calibrationResults['matrix'][1, 1]
     # Take the average of x and y, they are already almost equal
-    f = (focalX + focalY) / 2.0
+    focalLength = (focalX + focalY) / 2.0
 
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
-    freeParameters = nonLinearLeastSquares(f, vertices, exteriorPts)
+    freeParameters = nonLinearLeastSquares(focalLength, vertices, exteriorPts,
+                                           args.plot_parameters)
     HT = HT_from_parameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)
+
+    if args.plot_final_results:
+        for imagePath in imagePaths:
+            # Get the basic information necessary
+            image = cv_tools.readImage(imagePath)
+            vertices, exteriorPts = getCalibPoints([imagePath])
+
+            # Display the original points
+            for vertex in vertices:
+                center = tuple([int(x) for x in vertex])
+                cv2.circle(image, center, radius=6, thickness=2,
+                           color=(204, 255, 0))
+
+            for point in exteriorPts:
+                globalFramePt = np.hstack((point, 1.0))
+                cameraFramePt = HT.dot(globalFramePt)
+                cameraFramePixels = cameraFramePt[0:2] * (focalLength / cameraFramePt[2])
+                center = tuple([int(x) for x in cameraFramePixels])
+                cv2.circle(image, center, radius=4, thickness=1,
+                           color=(0, 0, 255))
+                # import ipdb; ipdb.set_trace()
+
+            cv_tools.showImage(metadata, image)
 
 
 def getCalibPoints(imagePaths):
@@ -224,9 +248,9 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
     # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
     # Choose initial values for the free parameters
-    phi = 3.0
-    omega = 0.1
-    kappa = 0.05
+    phi = 3.2
+    omega = 1.0
+    kappa = -0.5
     s_14 = 0.02
     s_24 = 0.01
     s_34 = 0.04
@@ -236,7 +260,7 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
 
     # TODO: Make this for loop a combination of delta resolution and maximum
     #       iterations
-    for i in range(10):
+    for i in range(15):
         # Loop through every measurement point
         residuals = None
         AMatrix = None
@@ -246,20 +270,20 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
             x_3 = exteriorPts[i][2]
 
             # y1 and y2 are the "measured output" variables
-            y1 = vertices[i][0] / f
-            y2 = vertices[i][1] / f
+            y1 = vertices[i][0]
+            y2 = vertices[i][1]
 
             # Calculate current residuals
             newResiduals = np.array([
-                [y1 - function1(freeParameters[:, -1], x_1, x_2, x_3)],
-                [y2 - function2(freeParameters[:, -1], x_1, x_2, x_3)],
+                [y1 - function1(freeParameters[:, -1], x_1, x_2, x_3, f)],
+                [y2 - function2(freeParameters[:, -1], x_1, x_2, x_3, f)],
             ])
             if residuals is None:
                 residuals = newResiduals
             else:
                 residuals = np.vstack((residuals, newResiduals))
 
-            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3)
+            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3, f)
             if AMatrix is None:
                 AMatrix = newAMatrix
             else:
@@ -330,14 +354,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Runs exterior (hand<>eye) camera calibration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-f", "--folder-name",
-                        help="Check this folder for calibration images",
+    parser.add_argument("-d", "--directory-name",
+                        help="Check this directory for calibration images",
                         default=None)
-    parser.add_argument("-p", "--run-pentagon-finding",
+    parser.add_argument("-f", "--run-pentagon-finding",
                         help="Runs the pentagon finding code",
                         action="store_true")
-    parser.add_argument("-t", "--plot-results",
+    parser.add_argument("-p", "--plot-pentagon-results",
                         help="Plots the final pentagon w/ lines/vertices",
+                        action="store_true")
+    parser.add_argument("-r", "--plot-final-results",
+                        help="Closes the loop and checks the initial points",
+                        action="store_true")
+    parser.add_argument("-t", "--plot-parameters",
+                        help="Plots how the free parameters asymptote",
                         action="store_true")
     args = parser.parse_args()
 

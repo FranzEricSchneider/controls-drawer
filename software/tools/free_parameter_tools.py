@@ -23,40 +23,41 @@ def HT_from_parameters(parameters):
     return HT
 
 
-def matrix_row(parameters, x_1, x_2, x_3):
+def matrix_row(parameters, x_1, x_2, x_3, f):
     return np.vstack([
-        f1_row(parameters, x_1, x_2, x_3),
-        f2_row(parameters, x_1, x_2, x_3),
+        f1_row(parameters, x_1, x_2, x_3, f),
+        f2_row(parameters, x_1, x_2, x_3, f),
     ])
 
 
-def f1_row(parameters, x_1, x_2, x_3):
+def f1_row(parameters, x_1, x_2, x_3, f):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df1_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),  
+        f * df1_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df1_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df1_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df1_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df1_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df1_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
     ])
 
 
-def f2_row(parameters, x_1, x_2, x_3):
+def f2_row(parameters, x_1, x_2, x_3, f):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df2_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),  
+        f * df2_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df2_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df2_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df2_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df2_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        f * df2_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
     ])
 
 
-def function1(parameters, x_1, x_2, x_3):
+def function1(parameters, x_1, x_2, x_3, f):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
-    return (
+    return f *\
+            (
                 (cos(phi) * cos(kappa)) * x_1 +
                 (sin (omega) * sin(phi) * cos(kappa) + cos(omega) * sin(kappa)) * x_2 +
                 (-cos(omega) * sin(phi) * cos(kappa) + sin(omega) * sin(kappa)) * x_3 +
@@ -69,9 +70,10 @@ def function1(parameters, x_1, x_2, x_3):
                 s_34
             )
 
-def function2(parameters, x_1, x_2, x_3):
+def function2(parameters, x_1, x_2, x_3, f):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
-    return (
+    return f *\
+            (
                 (-cos(phi) * sin(kappa)) * x_1 +
                 (-sin(omega) * sin(phi) * sin(kappa) + cos(omega) * cos(kappa)) * x_2 +
                 (cos(omega) * sin(phi) * sin(kappa) + sin(omega) * cos(kappa)) * x_3 +
