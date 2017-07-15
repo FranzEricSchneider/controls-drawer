@@ -1,4 +1,4 @@
-from sympy import symbols, sin, cos, diff, latex
+from sympy import symbols, sin, cos, diff
 
 
 # Calculus partial derivatives using this tutorial: http://docs.sympy.org/latest/tutorial/calculus.html
@@ -51,12 +51,6 @@ print("df1_dkappa: \n{}\n".format(df1_dkappa))
 print("df1_ds_14: \n{}\n".format(df1_ds_14))
 print("df1_ds_24: \n{}\n".format(df1_ds_24))
 print("df1_ds_34: \n{}\n".format(df1_ds_34))
-# print("df1_dphi: \n{}\n".format(latex(df1_dphi)))
-# print("df1_domega: \n{}\n".format(latex(df1_domega)))
-# print("df1_dkappa: \n{}\n".format(latex(df1_dkappa)))
-# print("df1_ds_14: \n{}\n".format(latex(df1_ds_14)))
-# print("df1_ds_24: \n{}\n".format(latex(df1_ds_24)))
-# print("df1_ds_34: \n{}\n".format(latex(df1_ds_34)))
 
 # Here's the second equation:
 # \begin{align*}
@@ -102,9 +96,3 @@ print("df2_dkappa: \n{}\n".format(df2_dkappa))
 print("df2_ds_14: \n{}\n".format(df2_ds_14))
 print("df2_ds_24: \n{}\n".format(df2_ds_24))
 print("df2_ds_34: \n{}\n".format(df2_ds_34))
-# print("df2_dphi: \n{}\n".format(latex(df2_dphi)))
-# print("df2_domega: \n{}\n".format(latex(df2_domega)))
-# print("df2_dkappa: \n{}\n".format(latex(df2_dkappa)))
-# print("df2_ds_14: \n{}\n".format(latex(df2_ds_14)))
-# print("df2_ds_24: \n{}\n".format(latex(df2_ds_24)))
-# print("df2_ds_34: \n{}\n".format(latex(df2_ds_34)))

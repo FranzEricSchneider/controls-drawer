@@ -173,20 +173,21 @@ def cameraCalibration(args):
             # Get the basic information necessary
             image = cv_tools.readImage(imagePath)
             pixelVertices, imFrameVertices, exteriorPts = \
-                getCalibPoints([imagePath], calibMatrix)
+                getCalibPoints([imagePath], calibrationResults['matrix'])
 
             # Display the original points
-            for t, vertex in enumerate(pixelVertices):
-                center = tuple([int(x) for x in vertex])
-                cv2.circle(image, center, radius=6, thickness=t,
+            for t, (vertex, point) in enumerate(zip(pixelVertices, exteriorPts)):
+                vertexCenter = tuple([int(x) for x in vertex])
+                cv2.circle(image, vertexCenter, radius=6, thickness=t,
                            color=(204, 255, 0))
 
-            for t, point in enumerate(exteriorPts):
                 globalFramePt = np.hstack((point, 1.0))
                 cameraFramePixels = globalToPixels(globalFramePt, HT, calibrationResults['matrix'])
-                center = tuple([int(x) for x in cameraFramePixels])
-                cv2.circle(image, center, radius=4, thickness=t,
+                pointCenter = tuple([int(x) for x in cameraFramePixels])
+                cv2.circle(image, pointCenter, radius=4, thickness=t,
                            color=(0, 0, 255))
+
+                cv2.line(image, vertexCenter, pointCenter, color=(0, 255, 0))
                 # import ipdb; ipdb.set_trace()
 
             cv_tools.showImage(metadata, image)
@@ -399,13 +400,6 @@ def pixelsToImFrame(pixelPoint, calibMatrix):
     return np.linalg.inv(calibMatrix).dot(pixelPoint)
 
 
-def imFrameToPixels(point, calibMatrix):
-    # TODO: Assumptions about point
-    # See details here:
-    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
-    return calibMatrix.dot(point[0:3])    
-
-
 def globalToPixels(point, HT, calibMatrix):
     # TODO: Assumptions about point
     # See details here:
@@ -418,44 +412,44 @@ def globalToPixels(point, HT, calibMatrix):
     return unitPixels[0:2]
 
 
-def linearLeastSquares(vertices, exteriorPts):
-    # The X matrix takes certain values in certain places, see sharelatex for
-    #   the details
-    lenVertices = len(vertices)
-    X = np.zeros((lenVertices, 12))
-    for i in xrange(lenVertices):
-        X[i, 0] = -f / vertices[i][0] * exteriorPts[i][0]
-        X[i, 1] = -f / vertices[i][0] * exteriorPts[i][1]
-        X[i, 2] = -f / vertices[i][0] * exteriorPts[i][2]       # ZERO
-        X[i, 3] = -f / vertices[i][0]
-        X[i, 4] = f * exteriorPts[i][0]
-        X[i, 5] = f * exteriorPts[i][1]
-        X[i, 6] = f * exteriorPts[i][2]
-        X[i, 7] = f
-        X[i, 8] = (1 - vertices[i][1]) * exteriorPts[i][0]
-        X[i, 9] = (1 - vertices[i][1]) * exteriorPts[i][1]
-        X[i, 10] = (1 - vertices[i][1]) * exteriorPts[i][2]     # ZERO
-        X[i, 11] = (1 - vertices[i][1])
-    # The Y matrix is all zeros, see sharelatex for why
-    Y = np.zeros((lenVertices, 1))
-    B = np.linalg.lstsq(X, Y)
-    # Why is the solution always zeros?
-    # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
-    #   inverted. Why?
-    # The big damn problem is that X.T.dot(X) cannot be inverted if its cols
-    #   are linearly Dependent, and that will happen in this case if X has cols
-    #   that are linearly Dependent. Try it out in wolfram to see. Basically
-    #   one X column is swept down X.T and then the negative of that is, and so
-    #   the two resulting columns are just a negative off.
-    def slicer(idx):
-        return np.array([False if i in idx else True for i in range(12)])
-    print  X[:, slicer([0, 1, 4, 5, 8, 9])].shape
-    print  np.linalg.matrix_rank(X[:, slicer([0, 1, 4, 5, 8, 9])])
-    xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
-    bByHand = xPart.dot(Y)
-    # As of 07/09/2017 when this was put here the linear least squares method
-    # was totally fizzled and I turned to the non-linear method
-    return None
+# def linearLeastSquares(vertices, exteriorPts):
+#     # The X matrix takes certain values in certain places, see sharelatex for
+#     #   the details
+#     lenVertices = len(vertices)
+#     X = np.zeros((lenVertices, 12))
+#     for i in xrange(lenVertices):
+#         X[i, 0] = -f / vertices[i][0] * exteriorPts[i][0]
+#         X[i, 1] = -f / vertices[i][0] * exteriorPts[i][1]
+#         X[i, 2] = -f / vertices[i][0] * exteriorPts[i][2]       # ZERO
+#         X[i, 3] = -f / vertices[i][0]
+#         X[i, 4] = f * exteriorPts[i][0]
+#         X[i, 5] = f * exteriorPts[i][1]
+#         X[i, 6] = f * exteriorPts[i][2]
+#         X[i, 7] = f
+#         X[i, 8] = (1 - vertices[i][1]) * exteriorPts[i][0]
+#         X[i, 9] = (1 - vertices[i][1]) * exteriorPts[i][1]
+#         X[i, 10] = (1 - vertices[i][1]) * exteriorPts[i][2]     # ZERO
+#         X[i, 11] = (1 - vertices[i][1])
+#     # The Y matrix is all zeros, see sharelatex for why
+#     Y = np.zeros((lenVertices, 1))
+#     B = np.linalg.lstsq(X, Y)
+#     # Why is the solution always zeros?
+#     # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
+#     #   inverted. Why?
+#     # The big damn problem is that X.T.dot(X) cannot be inverted if its cols
+#     #   are linearly Dependent, and that will happen in this case if X has cols
+#     #   that are linearly Dependent. Try it out in wolfram to see. Basically
+#     #   one X column is swept down X.T and then the negative of that is, and so
+#     #   the two resulting columns are just a negative off.
+#     def slicer(idx):
+#         return np.array([False if i in idx else True for i in range(12)])
+#     print  X[:, slicer([0, 1, 4, 5, 8, 9])].shape
+#     print  np.linalg.matrix_rank(X[:, slicer([0, 1, 4, 5, 8, 9])])
+#     xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
+#     bByHand = xPart.dot(Y)
+#     # As of 07/09/2017 when this was put here the linear least squares method
+#     # was totally fizzled and I turned to the non-linear method
+#     return None
 
 
 if __name__ == "__main__":
