@@ -146,6 +146,18 @@ def cameraCalibration(args):
     # Take the average of x and y, they are already almost equal
     focalLength = (focalX + focalY) / 2.0
 
+    # fullVertices = vertices
+    # fullExteriorPts = exteriorPts
+    # numIterations = 10
+    # for numRemove in np.arange(30, -3, -3):
+    #     print("Removing {}".format(numRemove))
+    #     if numRemove > 0:
+    #         vertices = fullVertices[0:-numRemove]
+    #         exteriorPts = fullExteriorPts[0:-numRemove]
+    #     else:
+    #         vertices = fullVertices
+    #         exteriorPts = fullExteriorPts
+
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
     freeParameters = nonLinearLeastSquares(focalLength, vertices, exteriorPts,
@@ -155,22 +167,23 @@ def cameraCalibration(args):
 
     if args.plot_final_results:
         for imagePath in imagePaths:
+        # for imagePath in [imagePaths[0]]:
             # Get the basic information necessary
             image = cv_tools.readImage(imagePath)
             vertices, exteriorPts = getCalibPoints([imagePath])
 
             # Display the original points
-            for vertex in vertices:
+            for t, vertex in enumerate(vertices):
                 center = tuple([int(x) for x in vertex])
-                cv2.circle(image, center, radius=6, thickness=2,
+                cv2.circle(image, center, radius=6, thickness=t,
                            color=(204, 255, 0))
 
-            for point in exteriorPts:
+            for t, point in enumerate(exteriorPts):
                 globalFramePt = np.hstack((point, 1.0))
                 cameraFramePt = HT.dot(globalFramePt)
                 cameraFramePixels = cameraFramePt[0:2] * (focalLength / cameraFramePt[2])
                 center = tuple([int(x) for x in cameraFramePixels])
-                cv2.circle(image, center, radius=4, thickness=1,
+                cv2.circle(image, center, radius=4, thickness=t,
                            color=(0, 0, 255))
                 # import ipdb; ipdb.set_trace()
 
@@ -355,10 +368,14 @@ if __name__ == "__main__":
         description="Runs exterior (hand<>eye) camera calibration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", "--directory-name",
-                        help="Check this directory for calibration images",
+                        help="Check this directory for calibration images. If"
+                             " None, run on the latest frames_{timestamp}"
+                             " directory in results/calibration_images",
                         default=None)
     parser.add_argument("-f", "--run-pentagon-finding",
-                        help="Runs the pentagon finding code",
+                        help="Runs the pentagon finding code. If there is no"
+                        " metadata file for an image the pentagon finding code"
+                        " is run anyway",
                         action="store_true")
     parser.add_argument("-p", "--plot-pentagon-results",
                         help="Plots the final pentagon w/ lines/vertices",

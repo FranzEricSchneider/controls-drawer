@@ -20,8 +20,8 @@ POLYGON_DEGREE = 5
 # Polygon side length in meters
 SIDE_LENGTH = 0.015
 # Point around which to take a pictures from
-PICTURE_POSITION = [-0.01, 0.008]
-JITTER = [0.022, 0.015]
+PICTURE_POSITION = [-0.009, 0.007]
+JITTER = [0.021, 0.013]
 
 
 class ExteriorCameraCalibration():
@@ -85,6 +85,9 @@ class ExteriorCameraCalibration():
             imReqMsg.dest_channel = self.imageChannel
             imReqMsg.xDiffMM = mToMM(imagingPosition[0])
             imReqMsg.yDiffMM = mToMM(imagingPosition[1])
+            imReqMsg.arg_names = ["threshold"]
+            imReqMsg.arg_values = ["75"]
+            imReqMsg.n_arguments = len(imReqMsg.arg_names)
             print("Sent image request!")
             self.lcmobj.publish(self.imageReqChannel, imReqMsg.encode())
 
@@ -96,8 +99,6 @@ class ExteriorCameraCalibration():
                 time.sleep(0.01)
             if self.frame is None:
                 print("Never ended up getting an image!")
-            else:
-                print("Got image")
 
             # Travel back to the starting spot
             reversePosMsg = lcm_msgs.auto_instantiate(self.posCmdChannel)
@@ -115,7 +116,7 @@ class ExteriorCameraCalibration():
         self.lastMsg = msg
 
     def onImage(self, channel, data):
-        print("Received an image!")
+        print("Received an image on channel {}!".format(channel))
         # Decode/parse out the image
         image = lcm_msgs.auto_decode(channel, data)
         # Save x/y position of the picture
@@ -133,8 +134,11 @@ class ExteriorCameraCalibration():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Runs exterior (hand<>eye) camera calibration",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Runs exterior (hand<>eye) camera calibration which draws"
+                    " a pentagon (unless told not to) and then takes a series"
+                    " of pictures, which go in the running directory",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", "--draw-pentagon",
                         help="Draw pentagon (don't draw if already in place)",
                         action='store_false')
