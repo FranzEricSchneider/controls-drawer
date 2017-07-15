@@ -150,8 +150,10 @@ class positionDriver2D():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Starts a 2D position driver",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Starts a 2D position driver, which takes relative position"
+                    " commands, adds them to a queue, and executes them",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # 0.01 m/s is quivalent to 600 mm/min
     parser.add_argument("-v", "--velocity-limit",
                         help="Velocity (m/s) to limit vector velocity at",

@@ -93,14 +93,14 @@ def cameraCalibration(args):
             # Then get the intersection points of those midlines to find the
             # corners of the pentagon
             midIndices = np.array(range(len(midLines)))
-            vertices = [midInfiniteLines[i].intersection(midInfiniteLines[j])
-                        for i, j in zip(midIndices, np.roll(midIndices, 1))]
+            pixelVertices = [midInfiniteLines[i].intersection(midInfiniteLines[j])
+                             for i, j in zip(midIndices, np.roll(midIndices, 1))]
 
             # Write the lines/vertices data to file
-            data = {"vertices": [list(vertex) for vertex in vertices]}
+            data = {"pixelVertices": [list(vertex) for vertex in pixelVertices]}
             with open(metadata, "w") as outfile:
                 json.dump(data, outfile)
-            print("Wrote vertices to {}".format(metadata))
+            print("Wrote pixelVertices to {}".format(metadata))
 
             # Plot the final pentagon if desired
             if args.plot_pentagon_results:
@@ -109,7 +109,7 @@ def cameraCalibration(args):
                     line.onImage(finalImage, thickness=1)
                 for line in midLines:
                     line.onImage(finalImage, color=(0, 255, 0), thickness=2)
-                for vertex in vertices:
+                for vertex in pixelVertices:
                     center = tuple([int(x) for x in vertex])
                     cv2.circle(finalImage, center, radius=6, thickness=2,
                                color=(204, 255, 0))
@@ -124,20 +124,16 @@ def cameraCalibration(args):
                 data = json.load(infile)
 
             # Plot and show those vertices
-            for vertex in data["vertices"]:
+            for vertex in data["pixelVertices"]:
                 center = tuple([int(x) for x in vertex])
                 cv2.circle(image, center, radius=6, thickness=2,
                            color=(204, 255, 0))
             cv_tools.showImage(metadata, image)
 
         else:
-            print("Found file containing point pairs for {}".format(imageName))
+            pass
+            # print("Found file containing point pairs for {}".format(imageName))
 
-    # Time to take the pixel vertex values, real world displacement values, and
-    # combine them into a transformation from tooltip to camera. Check out
-    # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
-    # behind this part
-    vertices, exteriorPts = getCalibPoints(imagePaths)
     # Get the interior camera calibration data to get a number for focal length
     calibrationResults = pickle.load(
         open(navigation.getLatestIntrinsicCalibration(), "rb"))
@@ -145,39 +141,118 @@ def cameraCalibration(args):
     focalY = calibrationResults['matrix'][1, 1]
     # Take the average of x and y, they are already almost equal
     focalLength = (focalX + focalY) / 2.0
+    # Time to take the pixel vertex values, real world displacement values, and
+    # combine them into a transformation from tooltip to camera. Check out
+    # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
+    # behind this part
+    pixelVertices, imFrameVertices, exteriorPts = \
+        getCalibPoints(imagePaths, calibrationResults["matrix"])
+
+    # fullVertices = vertices
+    # fullExteriorPts = exteriorPts
+    # numIterations = 10
+    # for numRemove in np.arange(30, -3, -3):
+    #     print("Removing {}".format(numRemove))
+    #     if numRemove > 0:
+    #         vertices = fullVertices[0:-numRemove]
+    #         exteriorPts = fullExteriorPts[0:-numRemove]
+    #     else:
+    #         vertices = fullVertices
+    #         exteriorPts = fullExteriorPts
 
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
-    freeParameters = nonLinearLeastSquares(focalLength, vertices, exteriorPts,
+    freeParameters = nonLinearLeastSquares(focalLength, imFrameVertices, exteriorPts,
                                            args.plot_parameters)
     HT = HT_from_parameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)
 
     if args.plot_final_results:
         for imagePath in imagePaths:
+        # for imagePath in [imagePaths[0]]:
             # Get the basic information necessary
             image = cv_tools.readImage(imagePath)
-            vertices, exteriorPts = getCalibPoints([imagePath])
+            pixelVertices, imFrameVertices, exteriorPts = \
+                getCalibPoints([imagePath], calibMatrix)
 
             # Display the original points
-            for vertex in vertices:
+            for t, vertex in enumerate(pixelVertices):
                 center = tuple([int(x) for x in vertex])
-                cv2.circle(image, center, radius=6, thickness=2,
+                cv2.circle(image, center, radius=6, thickness=t,
                            color=(204, 255, 0))
 
-            for point in exteriorPts:
+            for t, point in enumerate(exteriorPts):
                 globalFramePt = np.hstack((point, 1.0))
-                cameraFramePt = HT.dot(globalFramePt)
-                cameraFramePixels = cameraFramePt[0:2] * (focalLength / cameraFramePt[2])
+                cameraFramePixels = globalToPixels(globalFramePt, HT, calibrationResults['matrix'])
                 center = tuple([int(x) for x in cameraFramePixels])
-                cv2.circle(image, center, radius=4, thickness=1,
+                cv2.circle(image, center, radius=4, thickness=t,
                            color=(0, 0, 255))
                 # import ipdb; ipdb.set_trace()
 
             cv_tools.showImage(metadata, image)
 
+    if args.final_3d_plot:
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        exteriorPtsXYZ = np.array(exteriorPts)
+        exteriorPtsXYZ = np.hstack((exteriorPtsXYZ, np.ones((exteriorPtsXYZ.shape[0], 1))))
+        cameraFramePtsXYZ = HT.dot(exteriorPtsXYZ.T).T
+        import ipdb; ipdb.set_trace()
+        pass
 
-def getCalibPoints(imagePaths):
+        for counter in np.arange(5, len(exteriorPts) + 5, 5):
+            figure = plt.figure()
+            axes = figure.add_subplot(111, projection='3d')
+            # axes.scatter(xs=exteriorPtsXYZ[:counter, 0],
+            #              ys=exteriorPtsXYZ[:counter, 1],
+            #              zs=exteriorPtsXYZ[:counter, 2])
+            axes.scatter(xs=cameraFramePtsXYZ[:counter, 0],
+                         ys=cameraFramePtsXYZ[:counter, 1],
+                         zs=cameraFramePtsXYZ[:counter, 2])
+            # axes.set_xlim(-0.04, 0.04)
+            # axes.set_ylim(-0.04, 0.04)
+            # axes.set_zlim(-0.04, 0.04)
+            plt.show()
+            import ipdb; ipdb.set_trace()
+
+    if args.plot_axes:
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        figure = plt.figure()
+        axes = figure.add_subplot(111, projection='3d')
+
+        origin = np.array([0, 0, 0, 1])
+        camOrigin = HT[:, 3]
+        vectors = np.array([[0.1, 0, 0, 1], [0, 0.1, 0, 1], [0, 0, 0.1, 1]])
+        camVectors = HT.dot(vectors.T).T
+
+        axes.plot(xs=[origin[0], vectors[0, 0]],
+                  ys=[origin[1], vectors[0, 1]],
+                  zs=[origin[2], vectors[0, 2]], color=(1.0, 0, 0))
+        axes.plot(xs=[origin[0], vectors[1, 0]],
+                  ys=[origin[1], vectors[1, 1]],
+                  zs=[origin[2], vectors[1, 2]], color=(0, 1.0, 0))
+        axes.plot(xs=[origin[0], vectors[2, 0]],
+                  ys=[origin[1], vectors[2, 1]],
+                  zs=[origin[2], vectors[2, 2]], color=(0, 0, 1.0))
+
+        axes.plot(xs=[camOrigin[0], camVectors[0, 0]],
+                  ys=[camOrigin[1], camVectors[0, 1]],
+                  zs=[camOrigin[2], camVectors[0, 2]], color=(1.0, 0, 0))
+        axes.plot(xs=[camOrigin[0], camVectors[1, 0]],
+                  ys=[camOrigin[1], camVectors[1, 1]],
+                  zs=[camOrigin[2], camVectors[1, 2]], color=(0, 1.0, 0))
+        axes.plot(xs=[camOrigin[0], camVectors[2, 0]],
+                  ys=[camOrigin[1], camVectors[2, 1]],
+                  zs=[camOrigin[2], camVectors[2, 2]], color=(0, 0, 1.0))
+
+        # axes.set_xlim(-0.1, 0.35)
+        # axes.set_ylim(-0.1, 0.35)
+        # axes.set_zlim(-0.1, 0.35)
+        plt.show()
+
+
+def getCalibPoints(imagePaths, calibMatrix):
     """
     Assuming the pentagon points have been extracted from the given images,
     returns the point locations in pixel and exterior coordinates
@@ -192,7 +267,8 @@ def getCalibPoints(imagePaths):
                      the camera
     """
 
-    vertices = []
+    pixelVertices = []
+    imFrameVertices = []
     exteriorPts = []
 
     for imagePath in imagePaths:
@@ -202,7 +278,9 @@ def getCalibPoints(imagePaths):
         # Get vertices from the metadata
         with open(metadata, "r") as infile:
             data = json.load(infile)
-        vertices.extend(data["vertices"])
+        pixelVertices.extend(data["pixelVertices"])
+
+        imFrameVertices.extend([pixelsToImFrame(pixel, calibMatrix) for pixel in data["pixelVertices"]])
 
         # Parse tooltip data out of the image name
         imageNameSplit = imageName.lower().split("_")
@@ -224,13 +302,14 @@ def getCalibPoints(imagePaths):
 
         # Solve for the pentagon points in the exterior frame
         pentagonVectors = planar.polygonVectors(5)
-        from random import random
-        pointsFromCamera = pentagonVectors * sideLength - np.array([x, y, 0.0])
-        for line in pointsFromCamera:
-            line[-1] += (random() - 0.5) * 0.002
+        pentagonAddition = np.cumsum(pentagonVectors * sideLength, axis=0)
+        # The subtraction is because the (x,y) points show how much the toolframe
+        # moved before the picture. Ifframe moved (for example) -0.01 meters,
+        # then the points are now 0.01 in the positive direction from the toolframe
+        pointsFromCamera = pentagonAddition - np.array([x, y, 0.0])
         exteriorPts.extend(list(pointsFromCamera))
 
-    return (vertices, exteriorPts)
+    return (pixelVertices, imFrameVertices, exteriorPts)
 
 
 def getMetadata(imagePath):
@@ -248,19 +327,19 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
     # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
     # Choose initial values for the free parameters
-    phi = 3.2
-    omega = 1.0
-    kappa = -0.5
-    s_14 = 0.02
-    s_24 = 0.01
-    s_34 = 0.04
+    phi = np.pi
+    omega = 0.0
+    kappa = -1.0
+    s_14 = 0.01
+    s_24 = 0.02
+    s_34 = 0.07
     # Track the parameters over time in a matrix, use the latest values to
     # calculate each consecutive step
     freeParameters = np.array([phi, omega, kappa, s_14, s_24, s_34]).reshape(6, 1)
 
     # TODO: Make this for loop a combination of delta resolution and maximum
     #       iterations
-    for i in range(15):
+    for i in range(50):
         # Loop through every measurement point
         residuals = None
         AMatrix = None
@@ -269,7 +348,8 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
             x_2 = exteriorPts[i][1]
             x_3 = exteriorPts[i][2]
 
-            # y1 and y2 are the "measured output" variables
+            # y1 and y2 are the "measured output" variables, the (x,y) values
+            # in the image frame
             y1 = vertices[i][0]
             y2 = vertices[i][1]
 
@@ -308,6 +388,34 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
 
     # Return the best guess (most settled) values for the parameters
     return freeParameters[:, -1]
+
+
+def pixelsToImFrame(pixelPoint, calibMatrix):
+    # TODO: Assumptions about point
+    # See details here:
+    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    if len(pixelPoint) == 2:
+        pixelPoint = np.hstack((pixelPoint, 1))
+    return np.linalg.inv(calibMatrix).dot(pixelPoint)
+
+
+def imFrameToPixels(point, calibMatrix):
+    # TODO: Assumptions about point
+    # See details here:
+    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    return calibMatrix.dot(point[0:3])    
+
+
+def globalToPixels(point, HT, calibMatrix):
+    # TODO: Assumptions about point
+    # See details here:
+    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    if len(point) == 3:
+        point = np.hstack((point, 1))
+    cameraFramePt = HT.dot(point)
+    unscaledPixels = calibMatrix.dot(cameraFramePt[0:3])
+    unitPixels = unscaledPixels / unscaledPixels[2]
+    return unitPixels[0:2]
 
 
 def linearLeastSquares(vertices, exteriorPts):
@@ -354,11 +462,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Runs exterior (hand<>eye) camera calibration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-a", "--plot-axes",
+                        help="Plots the toolframe axes against the camera axes",
+                        action="store_true")
     parser.add_argument("-d", "--directory-name",
-                        help="Check this directory for calibration images",
+                        help="Check this directory for calibration images. If"
+                             " None, run on the latest frames_{timestamp}"
+                             " directory in results/calibration_images",
                         default=None)
     parser.add_argument("-f", "--run-pentagon-finding",
-                        help="Runs the pentagon finding code",
+                        help="Runs the pentagon finding code. If there is no"
+                        " metadata file for an image the pentagon finding code"
+                        " is run anyway",
+                        action="store_true")
+    parser.add_argument("-l", "--final-3d-plot",
+                        help="Displays the exterior points in 3D for debugging",
                         action="store_true")
     parser.add_argument("-p", "--plot-pentagon-results",
                         help="Plots the final pentagon w/ lines/vertices",

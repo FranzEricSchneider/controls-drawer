@@ -1,4 +1,5 @@
 import argparse
+import cv2
 import lcm
 import numpy as np
 import select
@@ -49,6 +50,34 @@ class BasicOpsFilter():
                 # Reset the image data
                 outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
                 outMsg.num_data = len(outMsg.data)
+            if "threshold" in inMsg.request.arg_names:
+                # Get the data as a frame
+                frame = lcm_msgs.image_t_to_nparray(outMsg)
+                # Get the threshold values. The formet is EITHER "int" (0-255)
+                # or "otsu". Otsu thresholding is an opencv special case where
+                # an algorithm tries to split the image into background and
+                # foreground. It seems to work well on the paper
+                # https://en.wikipedia.org/wiki/Otsu%27s_method
+                threshold = inMsg.request.arg_values[
+                    inMsg.request.arg_names.index("threshold")
+                ]
+                if threshold.lower() == "otsu":
+                    threshold, frame = cv2.threshold(frame,
+                                                     thresh=0,
+                                                     maxval=255,
+                                                     type=cv2.THRESH_BINARY|cv2.THRESH_OTSU)
+                    outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
+                    outMsg.num_data = len(outMsg.data)
+                else:
+                    threshold = int(threshold)
+                    assert threshold >= 0
+                    assert threshold <= 255
+                    _, frame = cv2.threshold(frame,
+                                                     thresh=threshold,
+                                                     maxval=255,
+                                                     type=cv2.THRESH_BINARY)
+                    outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
+                    outMsg.num_data = len(outMsg.data)
 
         # Publish the out image. If no operations were requested, could be same as input
         self.lcmobj.publish(inMsg.request.dest_channel, outMsg.encode())
