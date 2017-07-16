@@ -138,10 +138,6 @@ def cameraCalibration(args):
     # Get the interior camera calibration data to get a number for focal length
     calibrationResults = pickle.load(
         open(navigation.getLatestIntrinsicCalibration(), "rb"))
-    focalX = calibrationResults['matrix'][0, 0]
-    focalY = calibrationResults['matrix'][1, 1]
-    # Take the average of x and y, they are already almost equal
-    focalLength = (focalX + focalY) / 2.0
     # Time to take the pixel vertex values, real world displacement values, and
     # combine them into a transformation from tooltip to camera. Check out
     # https://www.sharelatex.com/project/586949e817ccee00403fbc56 for the math
@@ -164,7 +160,7 @@ def cameraCalibration(args):
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
     freeParameters = free_parameter_eqs.nonLinearLeastSquares(
-        focalLength, imFrameVertices, exteriorPts, args.plot_parameters
+        imFrameVertices, exteriorPts, plotValues=args.plot_parameters
     )
     HT = free_parameter_eqs.HT_from_parameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)
@@ -285,7 +281,7 @@ def getCalibPoints(imagePaths, calibMatrix):
             data = json.load(infile)
         pixelVertices.extend(data["pixelVertices"])
 
-        imFrameVertices.extend([cameras.pixelsToImFrame(pixel, calibMatrix)
+        imFrameVertices.extend([cameras.pixelsToImFrame(np.array(pixel), calibMatrix)
                                 for pixel in data["pixelVertices"]])
 
         # Parse tooltip data out of the image name

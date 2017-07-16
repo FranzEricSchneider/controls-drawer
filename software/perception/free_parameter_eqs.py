@@ -2,7 +2,7 @@ import numpy as np
 from numpy import eye, cos, sin
 
 
-def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
+def nonLinearLeastSquares(vertices, exteriorPts, iterations=15, plotValues=False):
     # Method and many of the more meaningless names taken from here:
     # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
@@ -19,7 +19,7 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
 
     # TODO: Make this for loop a combination of delta resolution and maximum
     #       iterations
-    for i in range(50):
+    for i in range(iterations):
         # Loop through every measurement point
         residuals = None
         AMatrix = None
@@ -72,33 +72,34 @@ def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
 
 def HT_from_parameters(parameters):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
-    HT = eye(4)
+    S_HT = eye(4)
     # These are the translational parameters
-    HT[0, 3] = s_14
-    HT[1, 3] = s_24
-    HT[2, 3] = s_34
+    S_HT[0, 3] = s_14
+    S_HT[1, 3] = s_24
+    S_HT[2, 3] = s_34
     # These relationships are laid out in the cse.usf.edu PDF linked in the
     # Sharelatex document
-    HT[0, 0] = cos(phi) * cos(kappa)
-    HT[0, 1] = sin (omega) * sin(phi) * cos(kappa) + cos(omega) * sin(kappa)
-    HT[0, 2] = -cos(omega) * sin(phi) * cos(kappa) + sin(omega) * sin(kappa)
-    HT[1, 0] = -cos(phi) * sin(kappa)
-    HT[1, 1] = -sin(omega) * sin(phi) * sin(kappa) + cos(omega) * cos(kappa)
-    HT[1, 2] = cos(omega) * sin(phi) * sin(kappa) + sin(omega) * cos(kappa)
-    HT[2, 0] = sin(phi)
-    HT[2, 1] = -sin(omega) * cos(phi)
-    HT[2, 2] = cos(omega) * cos(phi)
-    return HT
+    S_HT[0, 0] = cos(phi) * cos(kappa)
+    S_HT[0, 1] = sin (omega) * sin(phi) * cos(kappa) + cos(omega) * sin(kappa)
+    S_HT[0, 2] = -cos(omega) * sin(phi) * cos(kappa) + sin(omega) * sin(kappa)
+    S_HT[1, 0] = -cos(phi) * sin(kappa)
+    S_HT[1, 1] = -sin(omega) * sin(phi) * sin(kappa) + cos(omega) * cos(kappa)
+    S_HT[1, 2] = cos(omega) * sin(phi) * sin(kappa) + sin(omega) * cos(kappa)
+    S_HT[2, 0] = sin(phi)
+    S_HT[2, 1] = -sin(omega) * cos(phi)
+    S_HT[2, 2] = cos(omega) * cos(phi)
+    # See the sharelatex document for why this is inverted
+    return np.linalg.inv(S_HT)
 
 
-def matrix_row(parameters, x_1, x_2, x_3, f):
+def matrix_row(parameters, x_1, x_2, x_3):
     return np.vstack([
-        f1_row(parameters, x_1, x_2, x_3, f),
-        f2_row(parameters, x_1, x_2, x_3, f),
+        f1_row(parameters, x_1, x_2, x_3),
+        f2_row(parameters, x_1, x_2, x_3),
     ])
 
 
-def f1_row(parameters, x_1, x_2, x_3, f):
+def f1_row(parameters, x_1, x_2, x_3):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return np.array([
         df1_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
@@ -110,7 +111,7 @@ def f1_row(parameters, x_1, x_2, x_3, f):
     ])
 
 
-def f2_row(parameters, x_1, x_2, x_3, f):
+def f2_row(parameters, x_1, x_2, x_3):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return np.array([
         df2_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
@@ -122,7 +123,7 @@ def f2_row(parameters, x_1, x_2, x_3, f):
     ])
 
 
-def function1(parameters, x_1, x_2, x_3, f):
+def function1(parameters, x_1, x_2, x_3):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return (
                 (cos(phi) * cos(kappa)) * x_1 +
@@ -137,7 +138,7 @@ def function1(parameters, x_1, x_2, x_3, f):
                 s_34
             )
 
-def function2(parameters, x_1, x_2, x_3, f):
+def function2(parameters, x_1, x_2, x_3):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     return (
                 (-cos(phi) * sin(kappa)) * x_1 +
