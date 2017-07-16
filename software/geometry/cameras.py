@@ -1,5 +1,7 @@
 import numpy as np
 
+from utils.geometry_tools import checkOrthonormal
+
 
 def pixelsToImFrame(pixelPoint, calibMatrix):
     # See details here:
@@ -14,6 +16,8 @@ def pixelsToImFrame(pixelPoint, calibMatrix):
 
 
 def globalToPixels(point, HT, calibMatrix):
+    checkOrthonormal(HT)
+
     # See details here:
     # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
     if point.shape == (3,) or point.shape == (4,):
@@ -23,14 +27,7 @@ def globalToPixels(point, HT, calibMatrix):
                          " {}".format(point))
     if len(point) == 3:
         point = np.vstack((point, 1))
-    cameraFramePt = HT.dot(point)
+    cameraFramePt = np.linalg.inv(HT).dot(point)
     unscaledPixels = calibMatrix.dot(cameraFramePt[0:3])
     unitPixels = unscaledPixels / unscaledPixels[2]
-
-    print("\nppoint: {}".format(point))
-    print("HT: {}".format(HT))
-    print("cameraFramePt: {}".format(cameraFramePt))
-    print("calibMatrix: {}".format(calibMatrix))
-    print("unscaledPixels: {}".format(unscaledPixels))
-    print("unitPixels: {}".format(unitPixels))
     return unitPixels[0:2, 0]

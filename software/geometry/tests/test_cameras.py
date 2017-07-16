@@ -1,9 +1,12 @@
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pytest
 
 from geometry.cameras import pixelsToImFrame
 from geometry.cameras import globalToPixels
 from geometry.planar import Rx, Ry, Rz
+from utils.geometry_tools import plotAxes
 
 
 @pytest.fixture
@@ -63,14 +66,21 @@ def globalPoint():
 
 @pytest.fixture
 def HT():
-    # Remember! In an HT the rotation aspect is R.dot(globalFrame) = newFrame,
-    # but the transform is in the frame of the newFrame. This is because it
-    # goes v_newFrame = R.dot(v_globalFrame) + T, and so the T has to be in the
-    # new coordinate frame
+    # Remember! In an HT the rotation aspect is R.dot(newFrame) = globalFrame,
+    # and the transform is in the frame of the globalFrame. This is because it
+    # goes v_globalFrame = R.dot(v_newFrame) + T, and so the T has to be in the
+    # global coordinate frame
     matrix = np.eye(4)
-    matrix[0:3, 0:3] = Rz(np.pi).dot(Rx(np.pi))
-    matrix[0:3, 3] = np.array([0.1, -0.1, 1.0])
+    matrix[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi))
+    matrix[0:3, 3] = np.array([0.1, 0.1, 1.0])
     return matrix
+
+
+@pytest.fixture
+def axes():
+    figure = plt.figure()
+    axes = figure.add_subplot(111, projection='3d')
+    return axes
 
 
 class TestGlobalToPixels():
@@ -89,21 +99,64 @@ class TestGlobalToPixels():
         assert all(pixels == calibMatrix[0:2, 2])
         zeroHT[0:3, 0:3] = Rz(np.pi / 7)
 
-    def testPointPlacement(self, globalPoint, HT, calibMatrix):
+    def testDirectlyAbove(self, globalPoint, HT, calibMatrix):
         pixels = globalToPixels(globalPoint, HT, calibMatrix)
-        assert all(pixels == calibMatrix[0:2, 2])
+        assert all(np.isclose(pixels, calibMatrix[0:2, 2]))
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi / 3))
+        pixels = globalToPixels(globalPoint, HT, calibMatrix)
+        assert all(np.isclose(pixels, calibMatrix[0:2, 2]))
+
+        HT[0:3, 0:3] = Ry(np.pi).dot(Rz(np.pi / 5))
+        pixels = globalToPixels(globalPoint, HT, calibMatrix)
+        assert all(np.isclose(pixels, calibMatrix[0:2, 2]))
+
+    def testOffsetPoint(self, globalPoint, HT, calibMatrix):
+        # Get the base point
+        pixels = globalToPixels(globalPoint, HT, calibMatrix)
+
         offsetPoint = np.array([0.15, 0.15, 0.0, 1.0])
         newPixels = globalToPixels(offsetPoint, HT, calibMatrix)
         assert newPixels[0] < pixels[0]
         assert newPixels[1] > pixels[1]
+
         HT[0:3, 0:3] = Rx(np.pi)
         newPixels = globalToPixels(offsetPoint, HT, calibMatrix)
         assert newPixels[0] > pixels[0]
         assert newPixels[1] < pixels[1]
-        HT[0:3, 0:3] = Ry(np.pi/8).dot(Rz(np.pi).dot(Rx(np.pi)))
+
+    def testRotatedViewpoint(self, globalPoint, HT, calibMatrix):
+        # Get the base point
+        pixels = globalToPixels(globalPoint, HT, calibMatrix)
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Ry(np.pi/8)))
+        newPixels = globalToPixels(globalPoint, HT, calibMatrix)
+        assert newPixels[0] < pixels[0]
+        assert newPixels[1] == pixels[1]
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Ry(np.pi/8).dot(Rx(np.pi/8))))
+        newPixels = globalToPixels(globalPoint, HT, calibMatrix)
+        assert newPixels[0] < pixels[0]
+        assert newPixels[1] > pixels[1]
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Rx(np.pi/8)))
+        newPixels = globalToPixels(globalPoint, HT, calibMatrix)
+        assert newPixels[0] == pixels[0]
+        assert newPixels[1] > pixels[1]
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Rx(-np.pi/8).dot(Ry(-np.pi/8))))
         newPixels = globalToPixels(globalPoint, HT, calibMatrix)
         assert newPixels[0] > pixels[0]
-        assert newPixels[1] == pixels[1]
+        assert newPixels[1] < pixels[1]
+
+        # Uncomment and add axes argument to plot and debug
+        # plotAxes(axes, np.eye(4))
+        # plotAxes(axes, HT)
+        # axes.scatter(xs=[globalPoint[0]],
+        #              ys=[globalPoint[1]],
+        #              zs=[globalPoint[2]])
+        # plt.show()
+        # assert False
 
     def testErrorCases(self, HT, calibMatrix):
         with pytest.raises(AttributeError):
