@@ -11,7 +11,8 @@ from os import path
 import pickle
 
 from geometry import planar
-from free_parameter_tools import matrix_row, function1, function2, HT_from_parameters
+from geometry import cameras
+from perception import free_parameter_eqs
 from utils import cv_tools
 from utils import geometry_tools
 from utils import navigation
@@ -162,9 +163,10 @@ def cameraCalibration(args):
 
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
-    freeParameters = nonLinearLeastSquares(focalLength, imFrameVertices, exteriorPts,
-                                           args.plot_parameters)
-    HT = HT_from_parameters(freeParameters)
+    freeParameters = free_parameter_eqs.nonLinearLeastSquares(
+        focalLength, imFrameVertices, exteriorPts, args.plot_parameters
+    )
+    HT = free_parameter_eqs.HT_from_parameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)
 
     if args.plot_final_results:
@@ -182,7 +184,9 @@ def cameraCalibration(args):
                            color=(204, 255, 0))
 
                 globalFramePt = np.hstack((point, 1.0))
-                cameraFramePixels = globalToPixels(globalFramePt, HT, calibrationResults['matrix'])
+                cameraFramePixels = cameras.globalToPixels(
+                    globalFramePt, HT, calibrationResults['matrix']
+                )
                 pointCenter = tuple([int(x) for x in cameraFramePixels])
                 cv2.circle(image, pointCenter, radius=4, thickness=t,
                            color=(0, 0, 255))
@@ -281,7 +285,8 @@ def getCalibPoints(imagePaths, calibMatrix):
             data = json.load(infile)
         pixelVertices.extend(data["pixelVertices"])
 
-        imFrameVertices.extend([pixelsToImFrame(pixel, calibMatrix) for pixel in data["pixelVertices"]])
+        imFrameVertices.extend([cameras.pixelsToImFrame(pixel, calibMatrix)
+                                for pixel in data["pixelVertices"]])
 
         # Parse tooltip data out of the image name
         imageNameSplit = imageName.lower().split("_")
@@ -321,135 +326,6 @@ def getMetadata(imagePath):
     imageName = path.basename(imagePath)
     fileName = "pentagon_" + imageName.replace("png", "json")
     return imagePath.replace(imageName, fileName)
-
-
-def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
-    # Method and many of the more meaningless names taken from here:
-    # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
-
-    # Choose initial values for the free parameters
-    phi = np.pi
-    omega = 0.0
-    kappa = -1.0
-    s_14 = 0.01
-    s_24 = 0.02
-    s_34 = 0.07
-    # Track the parameters over time in a matrix, use the latest values to
-    # calculate each consecutive step
-    freeParameters = np.array([phi, omega, kappa, s_14, s_24, s_34]).reshape(6, 1)
-
-    # TODO: Make this for loop a combination of delta resolution and maximum
-    #       iterations
-    for i in range(50):
-        # Loop through every measurement point
-        residuals = None
-        AMatrix = None
-        for i in xrange(len(vertices)):
-            x_1 = exteriorPts[i][0]
-            x_2 = exteriorPts[i][1]
-            x_3 = exteriorPts[i][2]
-
-            # y1 and y2 are the "measured output" variables, the (x,y) values
-            # in the image frame
-            y1 = vertices[i][0]
-            y2 = vertices[i][1]
-
-            # Calculate current residuals
-            newResiduals = np.array([
-                [y1 - function1(freeParameters[:, -1], x_1, x_2, x_3, f)],
-                [y2 - function2(freeParameters[:, -1], x_1, x_2, x_3, f)],
-            ])
-            if residuals is None:
-                residuals = newResiduals
-            else:
-                residuals = np.vstack((residuals, newResiduals))
-
-            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3, f)
-            if AMatrix is None:
-                AMatrix = newAMatrix
-            else:
-                AMatrix = np.vstack((AMatrix, newAMatrix))
-
-        # I know the names don't mean anything, see Wolfram link
-        aMatrix = AMatrix.T.dot(AMatrix)
-        bMatrix = AMatrix.T.dot(residuals)
-        deltaFreeParameters = np.linalg.solve(aMatrix, bMatrix)
-        freeParameters = np.hstack((freeParameters,
-                                    freeParameters[:, -1].reshape(6, 1) + deltaFreeParameters))
-
-    if plotValues:
-        import matplotlib.pyplot as plt
-        titles = ["phi", "omega", "kappa", "s_14", "s_24", "s_34"]
-        for i in range(6):
-            plt.subplot(3, 2, i + 1)
-            plt.plot(freeParameters[i, :], "o-")
-            plt.title(titles[i])
-        plt.xlabel("Iterations")
-        plt.show()
-
-    # Return the best guess (most settled) values for the parameters
-    return freeParameters[:, -1]
-
-
-def pixelsToImFrame(pixelPoint, calibMatrix):
-    # TODO: Assumptions about point
-    # See details here:
-    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
-    if len(pixelPoint) == 2:
-        pixelPoint = np.hstack((pixelPoint, 1))
-    return np.linalg.inv(calibMatrix).dot(pixelPoint)
-
-
-def globalToPixels(point, HT, calibMatrix):
-    # TODO: Assumptions about point
-    # See details here:
-    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
-    if len(point) == 3:
-        point = np.hstack((point, 1))
-    cameraFramePt = HT.dot(point)
-    unscaledPixels = calibMatrix.dot(cameraFramePt[0:3])
-    unitPixels = unscaledPixels / unscaledPixels[2]
-    return unitPixels[0:2]
-
-
-# def linearLeastSquares(vertices, exteriorPts):
-#     # The X matrix takes certain values in certain places, see sharelatex for
-#     #   the details
-#     lenVertices = len(vertices)
-#     X = np.zeros((lenVertices, 12))
-#     for i in xrange(lenVertices):
-#         X[i, 0] = -f / vertices[i][0] * exteriorPts[i][0]
-#         X[i, 1] = -f / vertices[i][0] * exteriorPts[i][1]
-#         X[i, 2] = -f / vertices[i][0] * exteriorPts[i][2]       # ZERO
-#         X[i, 3] = -f / vertices[i][0]
-#         X[i, 4] = f * exteriorPts[i][0]
-#         X[i, 5] = f * exteriorPts[i][1]
-#         X[i, 6] = f * exteriorPts[i][2]
-#         X[i, 7] = f
-#         X[i, 8] = (1 - vertices[i][1]) * exteriorPts[i][0]
-#         X[i, 9] = (1 - vertices[i][1]) * exteriorPts[i][1]
-#         X[i, 10] = (1 - vertices[i][1]) * exteriorPts[i][2]     # ZERO
-#         X[i, 11] = (1 - vertices[i][1])
-#     # The Y matrix is all zeros, see sharelatex for why
-#     Y = np.zeros((lenVertices, 1))
-#     B = np.linalg.lstsq(X, Y)
-#     # Why is the solution always zeros?
-#     # When xPart is calculated X.T.dot(X) is a "singular matrix" and can't be
-#     #   inverted. Why?
-#     # The big damn problem is that X.T.dot(X) cannot be inverted if its cols
-#     #   are linearly Dependent, and that will happen in this case if X has cols
-#     #   that are linearly Dependent. Try it out in wolfram to see. Basically
-#     #   one X column is swept down X.T and then the negative of that is, and so
-#     #   the two resulting columns are just a negative off.
-#     def slicer(idx):
-#         return np.array([False if i in idx else True for i in range(12)])
-#     print  X[:, slicer([0, 1, 4, 5, 8, 9])].shape
-#     print  np.linalg.matrix_rank(X[:, slicer([0, 1, 4, 5, 8, 9])])
-#     xPart = np.linalg.inv(X.T.dot(X)).dot(X.T)
-#     bByHand = xPart.dot(Y)
-#     # As of 07/09/2017 when this was put here the linear least squares method
-#     # was totally fizzled and I turned to the non-linear method
-#     return None
 
 
 if __name__ == "__main__":

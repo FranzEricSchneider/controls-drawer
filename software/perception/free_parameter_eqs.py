@@ -2,6 +2,74 @@ import numpy as np
 from numpy import eye, cos, sin
 
 
+def nonLinearLeastSquares(f, vertices, exteriorPts, plotValues=False):
+    # Method and many of the more meaningless names taken from here:
+    # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
+
+    # Choose initial values for the free parameters
+    phi = np.pi
+    omega = 0.0
+    kappa = -1.0
+    s_14 = 0.01
+    s_24 = 0.02
+    s_34 = 0.07
+    # Track the parameters over time in a matrix, use the latest values to
+    # calculate each consecutive step
+    freeParameters = np.array([phi, omega, kappa, s_14, s_24, s_34]).reshape(6, 1)
+
+    # TODO: Make this for loop a combination of delta resolution and maximum
+    #       iterations
+    for i in range(50):
+        # Loop through every measurement point
+        residuals = None
+        AMatrix = None
+        for i in xrange(len(vertices)):
+            x_1 = exteriorPts[i][0]
+            x_2 = exteriorPts[i][1]
+            x_3 = exteriorPts[i][2]
+
+            # y1 and y2 are the "measured output" variables, the (x,y) values
+            # in the image frame
+            y1 = vertices[i][0]
+            y2 = vertices[i][1]
+
+            # Calculate current residuals
+            newResiduals = np.array([
+                [y1 - function1(freeParameters[:, -1], x_1, x_2, x_3)],
+                [y2 - function2(freeParameters[:, -1], x_1, x_2, x_3)],
+            ])
+            if residuals is None:
+                residuals = newResiduals
+            else:
+                residuals = np.vstack((residuals, newResiduals))
+
+            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3)
+            if AMatrix is None:
+                AMatrix = newAMatrix
+            else:
+                AMatrix = np.vstack((AMatrix, newAMatrix))
+
+        # I know the names don't mean anything, see Wolfram link
+        aMatrix = AMatrix.T.dot(AMatrix)
+        bMatrix = AMatrix.T.dot(residuals)
+        deltaFreeParameters = np.linalg.solve(aMatrix, bMatrix)
+        freeParameters = np.hstack((freeParameters,
+                                    freeParameters[:, -1].reshape(6, 1) + deltaFreeParameters))
+
+    if plotValues:
+        import matplotlib.pyplot as plt
+        titles = ["phi", "omega", "kappa", "s_14", "s_24", "s_34"]
+        for i in range(6):
+            plt.subplot(3, 2, i + 1)
+            plt.plot(freeParameters[i, :], "o-")
+            plt.title(titles[i])
+            plt.xlabel("Iterations")
+        plt.show()
+
+    # Return the best guess (most settled) values for the parameters
+    return freeParameters[:, -1]
+
+
 def HT_from_parameters(parameters):
     phi, omega, kappa, s_14, s_24, s_34 = parameters
     HT = eye(4)
