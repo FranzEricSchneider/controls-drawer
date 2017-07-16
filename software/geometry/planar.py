@@ -7,6 +7,18 @@ import cv2
 import numpy as np
 
 
+def Rx(angle):
+    return np.array([[1, 0, 0],
+                     [0, np.cos(angle), -np.sin(angle)],
+                     [0, np.sin(angle),  np.cos(angle)]])
+
+
+def Ry(angle):
+    return np.array([[np.cos(angle), 0, np.sin(angle)],
+                     [0, 1, 0],
+                     [-np.sin(angle), 0, np.cos(angle)]])
+
+
 def Rz(angle):
     return np.array([[np.cos(angle), -np.sin(angle), 0],
                      [np.sin(angle), np.cos(angle), 0],
