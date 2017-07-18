@@ -4,8 +4,8 @@ from sympy import symbols, sin, cos, diff
 # Calculus partial derivatives using this tutorial: http://docs.sympy.org/latest/tutorial/calculus.html
 # To see why we need the partial derivatives see the LaTeX
 
-p_1, p_2, f, phi, omega, kappa, x_1, x_2, x_3, s_14, s_24, s_34 = \
-    symbols('p_1 p_2 f phi omega kappa x_1 x_2 x_3 s_14 s_24 s_34')
+omega, phi, kappa, x_1, x_2, x_3, s_14, s_24, s_34 = \
+    symbols('omega phi kappa x_1 x_2 x_3 s_14 s_24 s_34')
 
 # Here's the first equation:
 # \begin{align*}
@@ -38,15 +38,15 @@ function1 = (
                 s_34
             )
 
-df1_dphi = diff(function1, phi)
 df1_domega = diff(function1, omega)
+df1_dphi = diff(function1, phi)
 df1_dkappa = diff(function1, kappa)
 df1_ds_14 = diff(function1, s_14)
 df1_ds_24 = diff(function1, s_24)
 df1_ds_34 = diff(function1, s_34)
 
-print("df1_dphi: \n{}\n".format(df1_dphi))
 print("df1_domega: \n{}\n".format(df1_domega))
+print("df1_dphi: \n{}\n".format(df1_dphi))
 print("df1_dkappa: \n{}\n".format(df1_dkappa))
 print("df1_ds_14: \n{}\n".format(df1_ds_14))
 print("df1_ds_24: \n{}\n".format(df1_ds_24))
@@ -83,15 +83,15 @@ function2 = (
                 s_34
             )
 
-df2_dphi = diff(function2, phi)
 df2_domega = diff(function2, omega)
+df2_dphi = diff(function2, phi)
 df2_dkappa = diff(function2, kappa)
 df2_ds_14 = diff(function2, s_14)
 df2_ds_24 = diff(function2, s_24)
 df2_ds_34 = diff(function2, s_34)
 
-print("df2_dphi: \n{}\n".format(df2_dphi))
 print("df2_domega: \n{}\n".format(df2_domega))
+print("df2_dphi: \n{}\n".format(df2_dphi))
 print("df2_dkappa: \n{}\n".format(df2_dkappa))
 print("df2_ds_14: \n{}\n".format(df2_ds_14))
 print("df2_ds_24: \n{}\n".format(df2_ds_24))
