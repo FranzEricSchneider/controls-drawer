@@ -162,7 +162,7 @@ def cameraCalibration(args):
     freeParameters = free_parameter_eqs.nonLinearLeastSquares(
         imFrameVertices, exteriorPts, plotValues=args.plot_parameters
     )
-    HT = free_parameter_eqs.HT_from_parameters(freeParameters)
+    HT = free_parameter_eqs.HTFromParameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)
 
     if args.plot_final_results:

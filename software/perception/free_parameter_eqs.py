@@ -2,20 +2,20 @@ import numpy as np
 from numpy import eye, cos, sin
 
 
-def nonLinearLeastSquares(vertices, exteriorPts, iterations=15, plotValues=False):
+def nonLinearLeastSquares(vertices, exteriorPts, iterations=50, plotValues=False):
     # Method and many of the more meaningless names taken from here:
     # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
     # Choose initial values for the free parameters
-    phi = np.pi
-    omega = 0.0
-    kappa = -1.0
+    omega = np.pi
+    phi = 0.0
+    kappa = -np.pi
     s_14 = 0.01
     s_24 = 0.02
     s_34 = 0.07
     # Track the parameters over time in a matrix, use the latest values to
     # calculate each consecutive step
-    freeParameters = np.array([phi, omega, kappa, s_14, s_24, s_34]).reshape(6, 1)
+    freeParameters = np.array([omega, phi, kappa, s_14, s_24, s_34]).reshape(6, 1)
 
     # TODO: Make this for loop a combination of delta resolution and maximum
     #       iterations
@@ -43,7 +43,7 @@ def nonLinearLeastSquares(vertices, exteriorPts, iterations=15, plotValues=False
             else:
                 residuals = np.vstack((residuals, newResiduals))
 
-            newAMatrix = matrix_row(freeParameters[:, -1], x_1, x_2, x_3)
+            newAMatrix = matrixRow(freeParameters[:, -1], x_1, x_2, x_3)
             if AMatrix is None:
                 AMatrix = newAMatrix
             else:
@@ -58,7 +58,7 @@ def nonLinearLeastSquares(vertices, exteriorPts, iterations=15, plotValues=False
 
     if plotValues:
         import matplotlib.pyplot as plt
-        titles = ["phi", "omega", "kappa", "s_14", "s_24", "s_34"]
+        titles = ["omega", "phi", "kappa", "s_14", "s_24", "s_34"]
         for i in range(6):
             plt.subplot(3, 2, i + 1)
             plt.plot(freeParameters[i, :], "o-")
@@ -70,8 +70,8 @@ def nonLinearLeastSquares(vertices, exteriorPts, iterations=15, plotValues=False
     return freeParameters[:, -1]
 
 
-def HT_from_parameters(parameters):
-    phi, omega, kappa, s_14, s_24, s_34 = parameters
+def HTFromParameters(parameters):
+    omega, phi, kappa, s_14, s_24, s_34 = parameters
     S_HT = eye(4)
     # These are the translational parameters
     S_HT[0, 3] = s_14
@@ -92,7 +92,7 @@ def HT_from_parameters(parameters):
     return np.linalg.inv(S_HT)
 
 
-def matrix_row(parameters, x_1, x_2, x_3):
+def matrixRow(parameters, x_1, x_2, x_3):
     return np.vstack([
         f1_row(parameters, x_1, x_2, x_3),
         f2_row(parameters, x_1, x_2, x_3),
@@ -100,31 +100,31 @@ def matrix_row(parameters, x_1, x_2, x_3):
 
 
 def f1_row(parameters, x_1, x_2, x_3):
-    phi, omega, kappa, s_14, s_24, s_34 = parameters
+    omega, phi, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df1_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df1_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_ds_34(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
     ])
 
 
 def f2_row(parameters, x_1, x_2, x_3):
-    phi, omega, kappa, s_14, s_24, s_34 = parameters
+    omega, phi, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df2_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
-        df2_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_ds_34(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
     ])
 
 
 def function1(parameters, x_1, x_2, x_3):
-    phi, omega, kappa, s_14, s_24, s_34 = parameters
+    omega, phi, kappa, s_14, s_24, s_34 = parameters
     return (
                 (cos(phi) * cos(kappa)) * x_1 +
                 (sin (omega) * sin(phi) * cos(kappa) + cos(omega) * sin(kappa)) * x_2 +
@@ -139,7 +139,7 @@ def function1(parameters, x_1, x_2, x_3):
             )
 
 def function2(parameters, x_1, x_2, x_3):
-    phi, omega, kappa, s_14, s_24, s_34 = parameters
+    omega, phi, kappa, s_14, s_24, s_34 = parameters
     return (
                 (-cos(phi) * sin(kappa)) * x_1 +
                 (-sin(omega) * sin(phi) * sin(kappa) + cos(omega) * cos(kappa)) * x_2 +
@@ -155,15 +155,7 @@ def function2(parameters, x_1, x_2, x_3):
 
 
 # See the Sharelatex for what all these partial derivatives mean
-def df1_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
-    return (-x_1*cos(phi) - x_2*sin(omega)*sin(phi) + x_3*sin(phi)*cos(omega)) *\
-           (s_14 + x_1*cos(kappa)*cos(phi) + x_2*(sin(kappa)*cos(omega) + sin(omega)*sin(phi)*cos(kappa)) + x_3*(sin(kappa)*sin(omega) - sin(phi)*cos(kappa)*cos(omega))) /\
-           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2 +\
-           (-x_1*sin(phi)*cos(kappa) + x_2*sin(omega)*cos(kappa)*cos(phi) - x_3*cos(kappa)*cos(omega)*cos(phi)) /\
-           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
-
-
-def df1_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df1_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return (x_2*(-sin(kappa)*sin(omega) + sin(phi)*cos(kappa)*cos(omega)) + x_3*(sin(kappa)*cos(omega) + sin(omega)*sin(phi)*cos(kappa))) /\
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi)) +\
            (x_2*cos(omega)*cos(phi) + x_3*sin(omega)*cos(phi)) *\
@@ -171,33 +163,33 @@ def df1_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2
 
 
-def df1_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df1_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+    return (-x_1*cos(phi) - x_2*sin(omega)*sin(phi) + x_3*sin(phi)*cos(omega)) *\
+           (s_14 + x_1*cos(kappa)*cos(phi) + x_2*(sin(kappa)*cos(omega) + sin(omega)*sin(phi)*cos(kappa)) + x_3*(sin(kappa)*sin(omega) - sin(phi)*cos(kappa)*cos(omega))) /\
+           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2 +\
+           (-x_1*sin(phi)*cos(kappa) + x_2*sin(omega)*cos(kappa)*cos(phi) - x_3*cos(kappa)*cos(omega)*cos(phi)) /\
+           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
+
+
+def df1_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return (-x_1*sin(kappa)*cos(phi) + x_2*(-sin(kappa)*sin(omega)*sin(phi) + cos(kappa)*cos(omega)) + x_3*(sin(kappa)*sin(phi)*cos(omega) + sin(omega)*cos(kappa))) /\
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
 
 
-def df1_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df1_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return 1 / (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
 
 
-def df1_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df1_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return 0
 
 
-def df1_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df1_ds_34(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return -(s_14 + x_1*cos(kappa)*cos(phi) + x_2*(sin(kappa)*cos(omega) + sin(omega)*sin(phi)*cos(kappa)) + x_3*(sin(kappa)*sin(omega) - sin(phi)*cos(kappa)*cos(omega))) /\
             (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2
 
 
-def df2_dphi(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
-    return (-x_1*cos(phi) - x_2*sin(omega)*sin(phi) + x_3*sin(phi)*cos(omega)) *\
-           (s_24 - x_1*sin(kappa)*cos(phi) + x_2*(-sin(kappa)*sin(omega)*sin(phi) + cos(kappa)*cos(omega)) + x_3*(sin(kappa)*sin(phi)*cos(omega) + sin(omega)*cos(kappa))) /\
-           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2 +\
-           (x_1*sin(kappa)*sin(phi) - x_2*sin(kappa)*sin(omega)*cos(phi) + x_3*sin(kappa)*cos(omega)*cos(phi)) /\
-           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
-
-
-def df2_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df2_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return (x_2*(-sin(kappa)*sin(phi)*cos(omega) - sin(omega)*cos(kappa)) + x_3*(-sin(kappa)*sin(omega)*sin(phi) + cos(kappa)*cos(omega))) /\
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi)) +\
            (x_2*cos(omega)*cos(phi) + x_3*sin(omega)*cos(phi)) *\
@@ -205,19 +197,27 @@ def df2_domega(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2
 
 
-def df2_dkappa(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df2_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+    return (-x_1*cos(phi) - x_2*sin(omega)*sin(phi) + x_3*sin(phi)*cos(omega)) *\
+           (s_24 - x_1*sin(kappa)*cos(phi) + x_2*(-sin(kappa)*sin(omega)*sin(phi) + cos(kappa)*cos(omega)) + x_3*(sin(kappa)*sin(phi)*cos(omega) + sin(omega)*cos(kappa))) /\
+           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2 +\
+           (x_1*sin(kappa)*sin(phi) - x_2*sin(kappa)*sin(omega)*cos(phi) + x_3*sin(kappa)*cos(omega)*cos(phi)) /\
+           (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
+
+
+def df2_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return (-x_1*cos(kappa)*cos(phi) + x_2*(-sin(kappa)*cos(omega) - sin(omega)*sin(phi)*cos(kappa)) + x_3*(-sin(kappa)*sin(omega) + sin(phi)*cos(kappa)*cos(omega))) /\
            (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
 
 
-def df2_ds_14(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df2_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return 0
 
 
-def df2_ds_24(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df2_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return 1 / (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))
 
 
-def df2_ds_34(phi, omega, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
+def df2_ds_34(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3):
     return -(s_24 - x_1*sin(kappa)*cos(phi) + x_2*(-sin(kappa)*sin(omega)*sin(phi) + cos(kappa)*cos(omega)) + x_3*(sin(kappa)*sin(phi)*cos(omega) + sin(omega)*cos(kappa))) /\
             (s_34 + x_1*sin(phi) - x_2*sin(omega)*cos(phi) + x_3*cos(omega)*cos(phi))**2
