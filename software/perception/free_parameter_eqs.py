@@ -2,20 +2,16 @@ import numpy as np
 from numpy import eye, cos, sin
 
 
-def nonLinearLeastSquares(vertices, exteriorPts, iterations=50, plotValues=False):
+def nonLinearLeastSquares(vertices, exteriorPts, parameters, iterations=50,
+                          plotValues=False):
     # Method and many of the more meaningless names taken from here:
     # http://mathworld.wolfram.com/NonlinearLeastSquaresFitting.html
 
     # Choose initial values for the free parameters
-    omega = np.pi
-    phi = 0.0
-    kappa = -np.pi
-    s_14 = 0.01
-    s_24 = 0.02
-    s_34 = 0.07
+
     # Track the parameters over time in a matrix, use the latest values to
     # calculate each consecutive step
-    freeParameters = np.array([omega, phi, kappa, s_14, s_24, s_34]).reshape(6, 1)
+    freeParameters = np.array(parameters).reshape(6, 1)
 
     # TODO: Make this for loop a combination of delta resolution and maximum
     #       iterations
@@ -52,9 +48,17 @@ def nonLinearLeastSquares(vertices, exteriorPts, iterations=50, plotValues=False
         # I know the names don't mean anything, see Wolfram link
         aMatrix = AMatrix.T.dot(AMatrix)
         bMatrix = AMatrix.T.dot(residuals)
-        deltaFreeParameters = np.linalg.solve(aMatrix, bMatrix)
-        freeParameters = np.hstack((freeParameters,
-                                    freeParameters[:, -1].reshape(6, 1) + deltaFreeParameters))
+        try:
+            deltaFreeParameters = np.linalg.solve(aMatrix, bMatrix)
+            freeParameters = np.hstack((freeParameters,
+                                        freeParameters[:, -1].reshape(6, 1) + deltaFreeParameters))
+        except np.linalg.LinAlgError:
+            print "AMatrix: {}".format(AMatrix)
+            print "AMatrix > 1e-8: {}".format(AMatrix > 1e-8)
+            print "residuals: {}".format(residuals)
+            print "aMatrix: {}".format(aMatrix)
+            print "bMatrix: {}".format(bMatrix)
+            break
 
     if plotValues:
         import matplotlib.pyplot as plt
@@ -102,8 +106,8 @@ def matrixRow(parameters, x_1, x_2, x_3):
 def f1_row(parameters, x_1, x_2, x_3):
     omega, phi, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df1_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df1_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df1_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df1_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df1_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df1_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
@@ -114,8 +118,8 @@ def f1_row(parameters, x_1, x_2, x_3):
 def f2_row(parameters, x_1, x_2, x_3):
     omega, phi, kappa, s_14, s_24, s_34 = parameters
     return np.array([
-        df2_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df2_domega(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
+        df2_dphi(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df2_dkappa(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df2_ds_14(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),
         df2_ds_24(omega, phi, kappa, s_14, s_24, s_34, x_1, x_2, x_3),

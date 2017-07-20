@@ -159,8 +159,15 @@ def cameraCalibration(args):
 
     # Calculate the 6 free parameters that make up a homogeneous transform,
     # three Euler angles and three translation distances
+    omega = np.pi
+    phi = 0.0
+    kappa = -np.pi
+    s_14 = 0.01
+    s_24 = 0.02
+    s_34 = 0.07
+    parameters = (omega, phi, kappa, s_14, s_24, s_34)
     freeParameters = free_parameter_eqs.nonLinearLeastSquares(
-        imFrameVertices, exteriorPts, plotValues=args.plot_parameters
+        imFrameVertices, exteriorPts, parameters, plotValues=args.plot_parameters
     )
     HT = free_parameter_eqs.HTFromParameters(freeParameters)
     geometry_tools.checkOrthonormal(HT)

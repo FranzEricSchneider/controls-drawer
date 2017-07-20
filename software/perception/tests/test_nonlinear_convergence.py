@@ -12,6 +12,19 @@ import pytest
 def rawExteriorPoints():
     # Defined in meters, in the tool frame
     return np.array([
+        # [-0.03, -0.021, 0.15],
+        # [-0.02, -0.014, 0.15],
+        # [-0.01, -0.007, 0.15],
+        # [0.0, 0.0, 0.15],
+        # [0.01, 0.007, 0.15],
+        # [0.02, 0.014, 0.15],
+        # [0.03, 0.021, 0.15],
+        # [-0.03, 0.021, 0.15],
+        # [-0.02, 0.014, 0.15],
+        # [-0.01, 0.007, 0.15],
+        # [0.01, -0.007, 0.15],
+        # [0.02, -0.014, 0.15],
+        # [0.03, -0.021, 0.15],
         [-0.03, -0.021, 0.0],
         [-0.02, -0.014, 0.0],
         [-0.01, -0.007, 0.0],
@@ -39,10 +52,10 @@ def axes():
 def HT():
     from geometry.planar import Rx, Rz
     HT = np.eye(4)
-    HT[0:3, 0:3] = Rz(np.pi).dot(Rx(np.pi))
-    HT[0:3, 3] = np.array([0, 0, 0.1])
-    # HT[0:3, 0:3] = Rz(np.pi).dot(Rx(13 * np.pi / 12))
-    # HT[0:3, 3] = np.array([0, 0.03, 0.1])
+    # HT[0:3, 0:3] = Rz(np.pi).dot(Rx(np.pi))
+    # HT[0:3, 3] = np.array([0, 0, 0.1])
+    HT[0:3, 0:3] = Rz(np.pi).dot(Rx(13 * np.pi / 12))
+    HT[0:3, 3] = np.array([0, 0.01, 0.1])
 
     # # Uncomment and add axes argument to plot and debug
     # from utils.geometry_tools import plotAxes
@@ -82,9 +95,25 @@ def rawImFrame(rawPixels, calibMatrix):
     return imFrame
 
 
-def testNonLinearFit(rawImFrame, rawExteriorPoints, HT):
+@pytest.fixture
+def parameters():
+    # Should basically match what's going on in HT
+    omega = -np.pi
+    phi = -0.01
+    kappa = -3.0
+    s_14 = 0.005
+    s_24 = 0.04
+    s_34 = 0.1
+    return (omega, phi, kappa, s_14, s_24, s_34)
+
+
+def testNonLinearFit(rawImFrame, rawExteriorPoints, parameters, HT):
     from perception.free_parameter_eqs import HTFromParameters
     from perception.free_parameter_eqs import nonLinearLeastSquares
-    freeParameters = nonLinearLeastSquares(rawImFrame, rawExteriorPoints, iterations=60, plotValues=True)
+    freeParameters = nonLinearLeastSquares(rawImFrame,
+                                           rawExteriorPoints,
+                                           parameters,
+                                           iterations=60,
+                                           plotValues=True)
     print freeParameters
     assert False
