@@ -37,18 +37,18 @@ def isOrthonormal(HT):
     return True
 
 
-def plotAxes(axes, HT):
+def plotAxes(axes, HT, scalar=1.0):
     T = HT[0:3, 3]
 
     # X Axis
-    axes.plot(xs=[T[0], T[0] + HT[0, 0]],
-              ys=[T[1], T[1] + HT[1, 0]],
-              zs=[T[2], T[2] + HT[2, 0]], color=(1.0, 0, 0))
+    axes.plot(xs=[T[0], T[0] + scalar * HT[0, 0]],
+              ys=[T[1], T[1] + scalar * HT[1, 0]],
+              zs=[T[2], T[2] + scalar * HT[2, 0]], color=(1.0, 0, 0))
     # Y Axis
-    axes.plot(xs=[T[0], T[0] + HT[0, 1]],
-              ys=[T[1], T[1] + HT[1, 1]],
-              zs=[T[2], T[2] + HT[2, 1]], color=(0, 1.0, 0))
+    axes.plot(xs=[T[0], T[0] + scalar * HT[0, 1]],
+              ys=[T[1], T[1] + scalar * HT[1, 1]],
+              zs=[T[2], T[2] + scalar * HT[2, 1]], color=(0, 1.0, 0))
     # Z Axis
-    axes.plot(xs=[T[0], T[0] + HT[0, 2]],
-              ys=[T[1], T[1] + HT[1, 2]],
-              zs=[T[2], T[2] + HT[2, 2]], color=(0, 0, 1.0))
+    axes.plot(xs=[T[0], T[0] + scalar * HT[0, 2]],
+              ys=[T[1], T[1] + scalar * HT[1, 2]],
+              zs=[T[2], T[2] + scalar * HT[2, 2]], color=(0, 0, 1.0))
