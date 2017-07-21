@@ -145,7 +145,6 @@ def testNonLinearFit(rawImFrame, rawExteriorPoints, parameters,
 
 
     import cv2
-    from utils.cv_tools import writeImage
     from geometry.cameras import globalToPixels
 
     np.set_printoptions(precision=3, suppress=True)
@@ -176,5 +175,5 @@ def testNonLinearFit(rawImFrame, rawExteriorPoints, parameters,
         center = tuple([int(x) for x in pixel])
         cv2.circle(image, center, radius=10, thickness=1, color=0)
 
-    writeImage("test_image.png", image)
+    cv2.imwrite("test_image.png", image)
     assert False

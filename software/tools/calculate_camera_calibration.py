@@ -162,9 +162,9 @@ def cameraCalibration(args):
     omega = np.pi
     phi = 0.0
     kappa = -np.pi
-    s_14 = 0.01
-    s_24 = 0.02
-    s_34 = 0.07
+    s_14 = 0.0
+    s_24 = 0.0
+    s_34 = 0.09
     parameters = (omega, phi, kappa, s_14, s_24, s_34)
     freeParameters = free_parameter_eqs.nonLinearLeastSquares(
         imFrameVertices, exteriorPts, parameters, plotValues=args.plot_parameters
