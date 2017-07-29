@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from geometry.cameras import pixelsToImFrame
+from geometry.cameras import imFrameToPixels
 from geometry.cameras import globalToPixels
 from geometry.planar import Rx, Ry, Rz
 from utils.geometry_tools import plotAxes
@@ -57,6 +58,41 @@ class TestPixelsToImFrame():
         # Should work
         imFrame = pixelsToImFrame(np.array([1, 2]), calibMatrix)
         imFrame = pixelsToImFrame(np.array([1, 2, 3]), calibMatrix)
+
+
+@pytest.fixture
+def imFramePoint():
+    return np.array([0.0, 0.0, 1.0])
+
+
+class TestImFrameToPixels():
+    def testCallable(self, imFramePoint, calibMatrix):
+        pixels = imFrameToPixels(imFramePoint, calibMatrix)
+
+    def testBasicCharacteristics(self, imFramePoint, calibMatrix):
+        pixels = imFrameToPixels(imFramePoint, calibMatrix)
+        assert pixels.shape == (2,)
+
+    def testCenterNearZero(self, imFramePoint, calibMatrix, centerPoint):
+        # Tests that an imframe point near the center of the image gets pixel
+        # values of ~c_x/c_y. The noise in the c_x/c_y values means that it's
+        # not exact
+        pixels = imFrameToPixels(imFramePoint, calibMatrix)
+        assert all(abs((pixels - centerPoint) < 5))
+
+    def testErrorCases(self, calibMatrix):
+        with pytest.raises(AttributeError):
+            pixels = imFrameToPixels("aaa", calibMatrix)
+        with pytest.raises(AttributeError):
+            pixels = imFrameToPixels([1, 4, 0], calibMatrix)
+        with pytest.raises(AttributeError):
+            pixels = imFrameToPixels(1.0, calibMatrix)
+        with pytest.raises(ValueError):
+            pixels = imFrameToPixels(np.array([1, 2]), calibMatrix)
+        with pytest.raises(ValueError):
+            pixels = imFrameToPixels(np.array([1, 2, 3, 4]), calibMatrix)
+        # Should work
+        pixels = imFrameToPixels(np.array([1, 2, 3]), calibMatrix)
 
 
 @pytest.fixture

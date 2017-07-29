@@ -15,6 +15,17 @@ def pixelsToImFrame(pixelPoint, calibMatrix):
     return np.linalg.inv(calibMatrix).dot(pixelPoint)
 
 
+def imFrameToPixels(imFramePoint, calibMatrix):
+    pass
+    # See details here:
+    # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    if imFramePoint.shape != (3,):
+        raise ValueError("imFrameToPixels accepts (3,) arrays, not"
+                         " {}".format(imFramePoint))
+    assert calibMatrix.shape == (3, 3)
+    return calibMatrix.dot(imFramePoint)[0:2]
+
+
 def globalToPixels(point, HT, calibMatrix):
     checkOrthonormal(HT)
 
