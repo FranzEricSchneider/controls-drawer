@@ -15,12 +15,25 @@ python ../../software/controllers/exterior_camera_calibration.py
 # change the threshold value as necessary
 
 # Once you have images that you're happy with, kill all drivers
+###############################################################################
 
+###############################################################################
+To run intrinsic camera calibration
+cd projects/controls-drawer
+source env.sh
+
+
+# First, put all the pictures of the square calibration image for the Crenova
+# 	 camera in crenova_iscope_endoscope_2Mpix/square_images/*.jpg
+# Edit the file to change various things
+subl software/drivers/general_camera_tests/test_calibration.py
+python software/drivers/general_camera_tests/test_calibration.py
 ###############################################################################
 
 ###############################################################################
 To move the table around by terminal
 
-subl software/drivers/cnc_table/simple_stream.py  # Edit to get the commands you want
+# Edit to get the commands you want
+subl software/drivers/cnc_table/simple_stream.py
 python software/drivers/cnc_table/simple_stream.py
 ###############################################################################
