@@ -27,7 +27,7 @@ def Rz(angle):
 
 def polygonVectors(numSides):
     """
-    Takes a number of sides (e.g. 5) and returns a 3 x numSides array with the
+    Takes a number of sides (e.g. 5) and returns a (3,numSides) array with the
     unit vectors for each side. The calling code can then scale the sides and
     place the origin where desired, and calculate the actual polygon points by
     adding the vectors up sequentially. This polygon has its first side on the
@@ -45,6 +45,20 @@ def polygonVectors(numSides):
         vectors.append(R.dot(vectors[-1]))
     # Return a numpy array of the unit vectors
     return np.array(vectors)
+
+
+def polygonPoints(numSides, sideLength):
+    """
+    Takes a number of sides (e.g. 5) and a side length (m) and returns a
+    (3,numSides) array with the point coordinates of the polygon. The first
+    point will be at (0, 0, 0), the second will be at (sideLength, 0, 0), then
+    the points will track from there
+    """
+    vectors = polygonVectors(numSides)
+    summedPoints = np.cumsum(vectors * sideLength, axis=0)
+    # The way the vectors go, the cumsum returns (0, 0, 0) as the last point.
+    # We want it to come first, so we rearrange with a vstack
+    return np.vstack((np.array([0, 0, 0]), summedPoints[:-1]))
 
 
 def hatchLine(vector, numHatches):

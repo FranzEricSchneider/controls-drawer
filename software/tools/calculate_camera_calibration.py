@@ -16,6 +16,7 @@ from perception import free_parameter_eqs
 from utils import cv_tools
 from utils import geometry_tools
 from utils import navigation
+from utils.geometry_tools import plotAxes
 from utils import ui
 
 
@@ -174,7 +175,6 @@ def cameraCalibration(args):
 
     if args.plot_final_results:
         for imagePath in imagePaths:
-        # for imagePath in [imagePaths[0]]:
             # Get the basic information necessary
             image = cv_tools.readImage(imagePath)
             pixelVertices, imFrameVertices, exteriorPts = \
@@ -194,10 +194,17 @@ def cameraCalibration(args):
                 cv2.circle(image, pointCenter, radius=4, thickness=t,
                            color=(0, 0, 255))
 
+                # Label the exterior points with their global coordinates
+                cv2.putText(img=image,
+                            text="({:.4f},{:.4f})".format(point[0], point[1]),
+                            org=pointCenter,
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.4,
+                            color=(175, 0, 255))
+                # Line between matching exterior points and pixel vertex
                 cv2.line(image, vertexCenter, pointCenter, color=(0, 255, 0))
-                # import ipdb; ipdb.set_trace()
 
-            cv_tools.showImage(metadata, image)
+            cv_tools.showImage(path.basename(imagePath), image)
 
     if args.final_3d_plot:
         import matplotlib.pyplot as plt
@@ -205,58 +212,40 @@ def cameraCalibration(args):
         exteriorPtsXYZ = np.array(exteriorPts)
         exteriorPtsXYZ = np.hstack((exteriorPtsXYZ, np.ones((exteriorPtsXYZ.shape[0], 1))))
         cameraFramePtsXYZ = HT.dot(exteriorPtsXYZ.T).T
-        import ipdb; ipdb.set_trace()
-        pass
 
         for counter in np.arange(5, len(exteriorPts) + 5, 5):
             figure = plt.figure()
             axes = figure.add_subplot(111, projection='3d')
-            # axes.scatter(xs=exteriorPtsXYZ[:counter, 0],
-            #              ys=exteriorPtsXYZ[:counter, 1],
-            #              zs=exteriorPtsXYZ[:counter, 2])
-            axes.scatter(xs=cameraFramePtsXYZ[:counter, 0],
-                         ys=cameraFramePtsXYZ[:counter, 1],
-                         zs=cameraFramePtsXYZ[:counter, 2])
+            plotAxes(axes, np.eye(4), scalar=0.1)
+            axes.scatter(xs=exteriorPtsXYZ[counter-5:counter, 0],
+                         ys=exteriorPtsXYZ[counter-5:counter, 1],
+                         zs=exteriorPtsXYZ[counter-5:counter, 2])
+            # axes.scatter(xs=cameraFramePtsXYZ[:counter, 0],
+            #              ys=cameraFramePtsXYZ[:counter, 1],
+            #              zs=cameraFramePtsXYZ[:counter, 2])
+            axes.set_xlabel('X')
+            axes.set_ylabel('Y')
+            axes.set_zlabel('Z')
             # axes.set_xlim(-0.04, 0.04)
             # axes.set_ylim(-0.04, 0.04)
             # axes.set_zlim(-0.04, 0.04)
             plt.show()
-            import ipdb; ipdb.set_trace()
 
     if args.plot_axes:
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
         figure = plt.figure()
         axes = figure.add_subplot(111, projection='3d')
+        axes.set_xlabel('X')
+        axes.set_ylabel('Y')
+        axes.set_zlabel('Z')
 
-        origin = np.array([0, 0, 0, 1])
-        camOrigin = HT[:, 3]
-        vectors = np.array([[0.1, 0, 0, 1], [0, 0.1, 0, 1], [0, 0, 0.1, 1]])
-        camVectors = HT.dot(vectors.T).T
+        plotAxes(axes, np.eye(4), scalar=0.1)
+        plotAxes(axes, HT, scalar=0.1)
 
-        axes.plot(xs=[origin[0], vectors[0, 0]],
-                  ys=[origin[1], vectors[0, 1]],
-                  zs=[origin[2], vectors[0, 2]], color=(1.0, 0, 0))
-        axes.plot(xs=[origin[0], vectors[1, 0]],
-                  ys=[origin[1], vectors[1, 1]],
-                  zs=[origin[2], vectors[1, 2]], color=(0, 1.0, 0))
-        axes.plot(xs=[origin[0], vectors[2, 0]],
-                  ys=[origin[1], vectors[2, 1]],
-                  zs=[origin[2], vectors[2, 2]], color=(0, 0, 1.0))
-
-        axes.plot(xs=[camOrigin[0], camVectors[0, 0]],
-                  ys=[camOrigin[1], camVectors[0, 1]],
-                  zs=[camOrigin[2], camVectors[0, 2]], color=(1.0, 0, 0))
-        axes.plot(xs=[camOrigin[0], camVectors[1, 0]],
-                  ys=[camOrigin[1], camVectors[1, 1]],
-                  zs=[camOrigin[2], camVectors[1, 2]], color=(0, 1.0, 0))
-        axes.plot(xs=[camOrigin[0], camVectors[2, 0]],
-                  ys=[camOrigin[1], camVectors[2, 1]],
-                  zs=[camOrigin[2], camVectors[2, 2]], color=(0, 0, 1.0))
-
-        # axes.set_xlim(-0.1, 0.35)
-        # axes.set_ylim(-0.1, 0.35)
-        # axes.set_zlim(-0.1, 0.35)
+        axes.set_xlim(-0.1, 0.1)
+        axes.set_ylim(-0.1, 0.1)
+        axes.set_zlim(-0.1, 0.1)
         plt.show()
 
 
@@ -294,28 +283,27 @@ def getCalibPoints(imagePaths, calibMatrix):
         # Parse tooltip data out of the image name
         imageNameSplit = imageName.lower().split("_")
         sideLength = None
-        x = None
-        y = None
+        xTravel = None
+        yTravel = None
         for part in imageNameSplit:
             if part.startswith("sl"):
                 # Length of pentagon side, in meters
                 sideLength = float(part.replace("sl", "")) / 1000
             if part.startswith("x"):
                 # X travel from 1st point to image point, in meters
-                x = float(part.replace("x", "")) / 1000
+                xTravel = float(part.replace("x", "")) / 1000
             if part.startswith("y"):
                 # Y travel from 1st point to image point, in meters
-                y = float(part.replace("y", "")) / 1000
-        if sideLength is None or x is None or y is None:
+                yTravel = float(part.replace("y", "")) / 1000
+        if sideLength is None or xTravel is None or yTravel is None:
             raise ValueError("Image {} lacks data".format(imageName))
 
         # Solve for the pentagon points in the exterior frame
-        pentagonVectors = planar.polygonVectors(5)
-        pentagonAddition = np.cumsum(pentagonVectors * sideLength, axis=0)
+        pentagonPoints = planar.polygonPoints(5, sideLength)
         # The subtraction is because the (x,y) points show how much the toolframe
         # moved before the picture. Ifframe moved (for example) -0.01 meters,
         # then the points are now 0.01 in the positive direction from the toolframe
-        pointsFromCamera = pentagonAddition - np.array([x, y, 0.0])
+        pointsFromCamera = pentagonPoints - np.array([xTravel, yTravel, 0.0])
         exteriorPts.extend(list(pointsFromCamera))
 
     return (pixelVertices, imFrameVertices, exteriorPts)
