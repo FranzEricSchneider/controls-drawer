@@ -17,6 +17,7 @@ class CameraDriver():
         self.videoCapture = self.setup(args)
         self.frame = None
         self.lcmobj = lcm.LCM()
+        self.saveImages = args.save_images
 
         # Get all calibration files and use the latest to get the data
         # returned by internal calibration
@@ -99,6 +100,9 @@ class CameraDriver():
         # Publish the raw image!
         print("Publishing on {}".format(self.outputChannel))
         self.lcmobj.publish(self.outputChannel, outMsg.encode())
+        # Save the image, if desired
+        if self.saveImages:
+            cv2.imwrite("frame_{}.png".format(outMsg.utime), frame)
 
     def setup(self, args):
         videoCapture = cv2.VideoCapture(args.video_index)
@@ -128,6 +132,9 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--request-channel",
                         help="LCM channel that requests will come on",
                         default="REQUEST_IMAGE")
+    parser.add_argument("-s", "--save-images",
+                        help="If true, saves every image when triggered",
+                        action="store_true")
     parser.add_argument("-v", "--video-index",
                         help="Index of video device (tried making udev symlink but failed)",
                         type=int,
