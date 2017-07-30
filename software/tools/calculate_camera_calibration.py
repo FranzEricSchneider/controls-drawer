@@ -248,6 +248,13 @@ def cameraCalibration(args):
         axes.set_zlim(-0.1, 0.1)
         plt.show()
 
+    if args.save_data:
+        exteriorResults = {'HT' : HT}
+        pickle.dump(
+            exteriorResults,
+            open("exterior_calibration_results_{}.pickle".format(lcm_msgs.utime_now()), "wb")
+        )
+
 
 def getCalibPoints(imagePaths, calibMatrix):
     """
@@ -347,6 +354,9 @@ if __name__ == "__main__":
                         action="store_true")
     parser.add_argument("-t", "--plot-parameters",
                         help="Plots how the free parameters asymptote",
+                        action="store_true")
+    parser.add_argument("-v", "--save-data",
+                        help="Saves the calibration data to a pickle file",
                         action="store_true")
     args = parser.parse_args()
 
