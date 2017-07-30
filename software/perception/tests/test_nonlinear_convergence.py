@@ -105,7 +105,7 @@ def calibMatrix():
 @pytest.fixture
 def rawPixels(rawExteriorPoints, HT, calibMatrix):
     from geometry.cameras import globalToPixels
-    pixels = np.array([globalToPixels(point, HT, calibMatrix)
+    pixels = np.array([globalToPixels(point, calibMatrix, HT=HT)
                        for point in rawExteriorPoints])
     return pixels
 
@@ -169,7 +169,8 @@ def testNonLinearFit(rawImFrame, rawExteriorPoints, parameters,
         center = tuple([int(x) for x in pixel])
         cv2.circle(image, center, radius=3, thickness=2, color=0)
     # Recomputed pixels
-    foundPixels = [globalToPixels(point, foundHT, calibMatrix)
+    invFoundHT = np.linalg.inv(foundHT)
+    foundPixels = [globalToPixels(point, calibMatrix, invHT=invFoundHT)
                    for point in rawExteriorPoints]
     for pixel in foundPixels:
         center = tuple([int(x) for x in pixel])

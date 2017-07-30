@@ -22,16 +22,17 @@ class Camera():
         self.HT = exteriorCalibResults['HT']
 
 
-def pixelsToImFrame(pixelPoint, calibMatrix):
+def pixelsToImFrame(pixelPoint, calibMatrix=None, invCalibMatrix=None):
     # See details here:
     # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    if invCalibMatrix is None:
+        invCalibMatrix = np.linalg.inv(calibMatrix)
     if pixelPoint.shape != (2,) and pixelPoint.shape != (3,):
         raise ValueError("pixelsToImFrame accepts (2,) or (3,) arrays, not"
                          " {}".format(pixelPoint))
-    assert calibMatrix.shape == (3, 3)
     if len(pixelPoint) == 2:
         pixelPoint = np.hstack((pixelPoint, 1))
-    return np.linalg.inv(calibMatrix).dot(pixelPoint)
+    return invCalibMatrix.dot(pixelPoint)
 
 
 def imFrameToPixels(imFramePoint, calibMatrix):
@@ -40,17 +41,16 @@ def imFrameToPixels(imFramePoint, calibMatrix):
     if imFramePoint.shape != (3,):
         raise ValueError("imFrameToPixels accepts (3,) arrays, not"
                          " {}".format(imFramePoint))
-    assert calibMatrix.shape == (3, 3)
     unscaledPixels = calibMatrix.dot(imFramePoint)
     unitPixels = unscaledPixels / unscaledPixels[2]
     return unitPixels[0:2]
 
 
-def globalToPixels(point, HT, calibMatrix):
-    checkOrthonormal(HT)
-
+def globalToPixels(point, calibMatrix, HT=None, invHT=None):
     # See details here:
     # http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    if invHT is None:
+        invHT = np.linalg.inv(HT)
     if point.shape == (3,) or point.shape == (4,):
         point = point.reshape((len(point), 1))
     elif point.shape != (3,1) and point.shape != (4,1):
@@ -58,28 +58,26 @@ def globalToPixels(point, HT, calibMatrix):
                          " {}".format(point.shape))
     if len(point) == 3:
         point = np.vstack((point, 1))
-    imFramePoint = np.linalg.inv(HT).dot(point)
+    print("invHT: {}".format(invHT))
+    print("point: {}".format(point))
+    imFramePoint = invHT.dot(point)
     return imFrameToPixels(imFramePoint[0:3, 0], calibMatrix)
 
 
-def pixelsToGlobalPlane(pixelPoint, HT, calibMatrix):
+def pixelsToGlobalPlane(pixelPoint, HT, invCalibMatrix):
     """
     Assuming the global plane is at z=0, project pixel points onto that plane.
     We can't otherwise write pixelsToGlobal because 2D doesn't contain enough
     information
     """
-    checkOrthonormal(HT)
-
-    imFramePoint = pixelsToImFrame(pixelPoint, calibMatrix)
-    if imFramePoint.shape == (3,1):
-        imFramePoint = imFramePoint.reshape((3,))
-    imFrameVector = np.hstack((imFramePoint, 0))
+    imFramePoint = pixelsToImFrame(pixelPoint, invCalibMatrix=invCalibMatrix)
     camOrigin = HT[0:3, 3]
-    unscaledGlobalVector = HT.dot(imFrameVector)
+    # By only using the rotation matrix we make this a vector, not a point
+    unscaledGlobalVector = HT[0:3, 0:3].dot(imFramePoint)
     # At this point we can calculate the correct scaling by setting the
     # resulting z value equal to 0. If we want to project on a non-(0,0,1)
     # plane then this will get more complicated
     # 0 = camOrigin[2] + k * globalVec[2]
     # k = -camOrigin[2] / globalVec[2]
     scalar = -camOrigin[2] / unscaledGlobalVector[2]
-    return camOrigin + scalar * unscaledGlobalVector[0:3]
+    return camOrigin + scalar * unscaledGlobalVector

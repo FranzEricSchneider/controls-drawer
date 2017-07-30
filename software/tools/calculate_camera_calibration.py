@@ -188,7 +188,7 @@ def cameraCalibration(args):
 
                 globalFramePt = np.hstack((point, 1.0))
                 cameraFramePixels = cameras.globalToPixels(
-                    globalFramePt, HT, calibrationResults['matrix']
+                    globalFramePt, calibrationResults['matrix'], HT=HT
                 )
                 pointCenter = tuple([int(x) for x in cameraFramePixels])
                 cv2.circle(image, pointCenter, radius=4, thickness=t,
