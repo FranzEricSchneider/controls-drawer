@@ -6,6 +6,7 @@ import pytest
 from geometry.cameras import pixelsToImFrame
 from geometry.cameras import imFrameToPixels
 from geometry.cameras import globalToPixels
+from geometry.cameras import pixelsToGlobalPlane
 from geometry.planar import Rx, Ry, Rz
 from utils.geometry_tools import plotAxes
 
@@ -133,7 +134,6 @@ class TestGlobalToPixels():
         zeroHT[2, 3] = -5.0
         pixels = globalToPixels(zeroPoint, zeroHT, calibMatrix)
         assert all(pixels == calibMatrix[0:2, 2])
-        zeroHT[0:3, 0:3] = Rz(np.pi / 7)
 
     def testDirectlyAbove(self, globalPoint, HT, calibMatrix):
         pixels = globalToPixels(globalPoint, HT, calibMatrix)
@@ -214,3 +214,67 @@ class TestGlobalToPixels():
         imFrame = globalToPixels(np.array([1, 2, 3, 4]), HT, calibMatrix)
         imFrame = globalToPixels(np.array([1, 2, 3]).reshape((3, 1)), HT, calibMatrix)
         imFrame = globalToPixels(np.array([1, 2, 3, 4]).reshape((4, 1)), HT, calibMatrix)
+
+
+class TestPixelsToGlobalPlane():
+    def testCallable(self, centerPoint, HT, calibMatrix):
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+
+    def testBasicCharacteristics(self, centerPoint, HT, calibMatrix):
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert point.shape == (3,)
+        assert np.isclose(point[2], 0.0)
+        # The sample HT has a displacement of (0.1, 0.1, 1.0) and the
+        # centerPoint points directly at it, but cx/cy errors keep it from
+        # being exact
+        assert all(abs(point[0:2] - HT[0:2, 3]) < 0.05)
+
+    def testDirectlyAbove(self, centerPoint, HT, calibMatrix):
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert all(abs(point[0:2] - HT[0:2, 3]) < 0.05)
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi / 3))
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert all(abs(point[0:2] - HT[0:2, 3]) < 0.05)
+
+        HT[0:3, 0:3] = Ry(np.pi).dot(Rz(np.pi / 5))
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert all(abs(point[0:2] - HT[0:2, 3]) < 0.05)
+
+    def testOffsetPoint(self, centerPoint, HT, calibMatrix):
+        # Get the base point
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+
+        offsetPixels = np.array([0, 0])
+        newPoint = pixelsToGlobalPlane(offsetPixels, HT, calibMatrix)
+        assert newPoint[0] > point[0]
+        assert newPoint[1] < point[1]
+
+        HT[0:3, 0:3] = Rx(np.pi)
+        newPoint = pixelsToGlobalPlane(offsetPixels, HT, calibMatrix)
+        assert newPoint[0] < point[0]
+        assert newPoint[1] > point[1]
+
+    def testRotatedViewpoint(self, centerPoint, HT, calibMatrix):
+        # Get the base point
+        point = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Ry(np.pi/8)))
+        newPoint = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert newPoint[0] < point[0]
+        assert abs(newPoint[1] - point[1]) < 0.01
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Ry(-np.pi/8).dot(Rx(np.pi/8))))
+        newPoint = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert newPoint[0] > point[0]
+        assert newPoint[1] < point[1]
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Rx(np.pi/8)))
+        newPoint = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert abs(newPoint[0] - point[0]) < 0.01
+        assert newPoint[1] < point[1]
+
+        HT[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi).dot(Rx(-np.pi/8).dot(Ry(-np.pi/8))))
+        newPoint = pixelsToGlobalPlane(centerPoint, HT, calibMatrix)
+        assert newPoint[0] > point[0]
+        assert newPoint[1] > point[1]
