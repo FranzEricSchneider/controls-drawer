@@ -38,3 +38,11 @@ def getLatestIntrinsicCalibration():
         "drivers/crenova_iscope_endoscope_2Mpix/intrinsic*.pickle"
     )
     return glob.glob(searchString)[-1]
+
+
+def getLatestExteriorCalibration():
+    searchString = os.path.join(
+        softwareDir(),
+        "drivers/crenova_iscope_endoscope_2Mpix/exterior*.pickle"
+    )
+    return glob.glob(searchString)[-1]
