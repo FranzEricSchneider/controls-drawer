@@ -7,7 +7,7 @@ from perception.line_following import maskAroundToolframe
 
 @pytest.fixture
 def shape():
-	return (640, 480)
+    return (640, 480)
 
 
 @pytest.fixture
@@ -40,10 +40,10 @@ def calibMatrix():
 
 
 class TestMaskAroundToolframe():
-	def testCallable(self, shape, centeredHT, calibMatrix):
-		from cProfile import Profile
-		pr = Profile()
-		pr.enable()
-		mask = maskAroundToolframe(shape, centeredHT, calibMatrix)
-		pr.dump_stats("maskAroundToolframe.runsnake")
-		assert False
+    def testCallable(self, shape, centeredHT, calibMatrix):
+        from cProfile import Profile
+        pr = Profile()
+        pr.enable()
+        mask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.15)
+        pr.dump_stats("maskAroundToolframe.runsnake")
+        assert False

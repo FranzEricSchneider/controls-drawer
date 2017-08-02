@@ -8,17 +8,15 @@ def maskAroundToolframe(shape, HT, calibMatrix, radius=0.03):
     Returns an mask with shape `shape ` that zeroes out an image out except for
     a radius around the (0, 0, 0) toolframe point in global space
     """
-    mask = np.zeros(shape, dtype="bool")
     invCalibMatrix = np.linalg.inv(calibMatrix)
-    for i in xrange(mask.shape[0]):
-        for j in xrange(mask.shape[1]):
-            pixel = np.array([i, j, 1.0])
-            point = pixelsToGlobalPlane(pixel, HT, invCalibMatrix)
-            # Since we're checking against (0, 0, 0) we can just take the
-            # norm without getting a vector difference
-            if any(point[0:2] > radius) or any(point[0:2] < -radius):
-                # Skip the norm call below
-                pass
-            elif np.linalg.norm(point[0:2]) < radius:
-                mask[i, j] = True
-    return mask
+    pixelCoords = np.array([[i, j, 1.0]
+                            for i in xrange(shape[0])
+                            for j in xrange(shape[1])]).T
+
+    pointsXY = pixelsToGlobalPlane(pixelCoords, HT, invCalibMatrix)[0:2].T
+    # First (fast check) remove all points with one axis greater than radius
+    mask = np.all(abs(pointsXY) < radius, axis=1)
+    # For the remainder, make sure the norm is less than radius
+    mask[mask] = np.linalg.norm(pointsXY[mask], axis=1) < radius
+
+    return mask.reshape((shape))
