@@ -9,7 +9,7 @@ def maskAroundToolframe(shape, HT, calibMatrix, radius=0.03):
     a radius around the (0, 0, 0) toolframe point in global space
     """
     invCalibMatrix = np.linalg.inv(calibMatrix)
-    pixelCoords = np.array([[i, j, 1.0]
+    pixelCoords = np.array([[j, i, 1.0]
                             for i in xrange(shape[0])
                             for j in xrange(shape[1])]).T
 
