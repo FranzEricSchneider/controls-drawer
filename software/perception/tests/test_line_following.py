@@ -7,7 +7,7 @@ from perception.line_following import maskAroundToolframe
 
 @pytest.fixture
 def shape():
-    return (640, 480)
+    return (480, 640)
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def centeredHT():
 def offcenterHT():
     matrix = np.eye(4)
     matrix[0:3, 0:3] = Rx(np.pi).dot(Rz(np.pi))
-    matrix[0:3, 3] = np.array([0.1, 0.1, 1.0])
+    matrix[0:3, 3] = np.array([0.1, -0.1, 1.0])
     return matrix
 
 
@@ -41,9 +41,25 @@ def calibMatrix():
 
 class TestMaskAroundToolframe():
     def testCallable(self, shape, centeredHT, calibMatrix):
-        from cProfile import Profile
-        pr = Profile()
-        pr.enable()
         mask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.15)
-        pr.dump_stats("maskAroundToolframe.runsnake")
-        assert False
+
+    def testCentered(self, shape, centeredHT, calibMatrix):
+        mask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.002)
+        assert mask.sum() > 1
+        assert mask[mask.shape[0] / 2, mask.shape[1] / 2] == True
+
+    def testSize(self, shape, centeredHT, calibMatrix):
+        smallMask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.002)
+        largeMask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.02)
+        assert smallMask.sum() < largeMask.sum()
+
+    def testComparision(self, shape, centeredHT, offcenterHT, calibMatrix):
+        center = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.08)
+        offcenter = maskAroundToolframe(shape, offcenterHT, calibMatrix, radius=0.08)
+
+        whereCenter = np.argwhere(center)
+        whereOffcenter = np.argwhere(offcenter)
+
+        centeredNorm = np.linalg.norm(whereCenter, axis=1)
+        offcenterNorm = np.linalg.norm(whereOffcenter, axis=1)
+        assert np.average(centeredNorm) < np.average(offcenterNorm)
