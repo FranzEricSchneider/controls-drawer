@@ -46,9 +46,21 @@ if __name__ == '__main__':
     circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
     dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
     intersection = (ring6to12Edges > 0) * (dilateCircleEdges9 > 0)
-    cv2.imwrite("ring6to12Edges.png", ring6to12Edges)
-    cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
-    cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
+    # cv2.imwrite("ring6to12Edges.png", ring6to12Edges)
+    # cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
+    # cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
 
-    cv2.imwrite("mask9mm.png", mask9mm.astype('double') * 255)
-    cv2.imwrite("ring6to12.png", ring6to12.astype('double') * 255)
+    # cv2.imwrite("mask9mm.png", mask9mm.astype('double') * 255)
+    # cv2.imwrite("ring6to12.png", ring6to12.astype('double') * 255)
+
+    intersectionImage = intersection.astype(np.uint8) * 255
+    intersectionContours, contours, hierarchy = \
+        cv2.findContours(intersectionImage.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(intersectionContours, contours, -1, (120), 3)
+
+    print("intersectionContours: {}".format(intersectionContours))
+    print("contours: {}".format(contours))
+    print("hierarchy: {}".format(hierarchy))
+
+    cv2.imwrite("intersectionImage.png", intersectionImage)
+    cv2.imwrite("intersectionContours.png", intersectionContours)
