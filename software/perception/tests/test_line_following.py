@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from geometry.planar import Rx, Ry, Rz
-from perception.line_following import maskAroundToolframe
+from perception.line_following import getCircularMask, getRingMask
 
 
 @pytest.fixture
@@ -39,23 +39,23 @@ def calibMatrix():
     return matrix
 
 
-class TestMaskAroundToolframe():
+class TestGetCircularMask():
     def testCallable(self, shape, centeredHT, calibMatrix):
-        mask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.15)
+        mask = getCircularMask(shape, centeredHT, calibMatrix, radius=0.15)
 
     def testCentered(self, shape, centeredHT, calibMatrix):
-        mask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.002)
+        mask = getCircularMask(shape, centeredHT, calibMatrix, radius=0.002)
         assert mask.sum() > 1
         assert mask[mask.shape[0] / 2, mask.shape[1] / 2] == True
 
     def testSize(self, shape, centeredHT, calibMatrix):
-        smallMask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.002)
-        largeMask = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.02)
+        smallMask = getCircularMask(shape, centeredHT, calibMatrix, radius=0.002)
+        largeMask = getCircularMask(shape, centeredHT, calibMatrix, radius=0.02)
         assert smallMask.sum() < largeMask.sum()
 
     def testComparision(self, shape, centeredHT, offcenterHT, calibMatrix):
-        center = maskAroundToolframe(shape, centeredHT, calibMatrix, radius=0.08)
-        offcenter = maskAroundToolframe(shape, offcenterHT, calibMatrix, radius=0.08)
+        center = getCircularMask(shape, centeredHT, calibMatrix, radius=0.08)
+        offcenter = getCircularMask(shape, offcenterHT, calibMatrix, radius=0.08)
 
         whereCenter = np.argwhere(center)
         whereOffcenter = np.argwhere(offcenter)
@@ -63,3 +63,11 @@ class TestMaskAroundToolframe():
         centeredNorm = np.linalg.norm(whereCenter, axis=1)
         offcenterNorm = np.linalg.norm(whereOffcenter, axis=1)
         assert np.average(centeredNorm) < np.average(offcenterNorm)
+
+
+class TestGetRingMask():
+    def testOverlap(self, shape, centeredHT, calibMatrix):
+        mask1 = getCircularMask(shape, centeredHT, calibMatrix, radius=0.05)
+        mask2 = getCircularMask(shape, centeredHT, calibMatrix, radius=0.1)
+        ringMask = getRingMask(shape, centeredHT, calibMatrix, 0.1, 0.05)
+        assert np.all(ringMask == np.logical_xor(mask1, mask2))
