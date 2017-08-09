@@ -82,7 +82,7 @@ def pixelsToGlobalPlane(pixelPoint, HT, invCalibMatrix):
     # plane then this will get more complicated
     # 0 = camOrigin[2] + k * globalVec[2]
     # k = -camOrigin[2] / globalVec[2]
-    if len(unscaledGlobalVectors) == 1:
+    if len(unscaledGlobalVectors.shape) == 1:
         scalar = -camOrigin[2] / unscaledGlobalVectors[2]
     else:
         scalar = -camOrigin[2] / unscaledGlobalVectors[2, :]

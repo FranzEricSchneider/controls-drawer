@@ -27,6 +27,77 @@ def getRingMask(shape, HT, calibMatrix, radius1, radius2):
     return np.logical_xor(mask1, mask2)
 
 
+def calcContourCenters(contours):
+    """
+    Inputs
+        contours: output from the cv2.findContours function, which is a list of
+            (n, 1, 2) arrays, each listing the vertices of a particular patch
+    """
+    patchCenters = []
+    for patch in contours:
+        patchCenters.append(np.round(np.average(patch, axis=0)[0]))
+    return patchCenters
+
+
+def findPairsOnLineEdge(patchCenters, HT, invCalibMatrix, width=0.001, allowedError=0.002):
+    """
+    Find pairs of contours within a certain distance in global terms
+
+    Inputs
+        patchCenters: the pixel center of each point of interest
+        width: approximate width of the line in meters
+        allowedError: allowed error between distance and width to count as pair
+    Outputs
+        pairs:
+        patchCenters: A list with the centered pi
+    """
+    numPatches = len(patchCenters)
+
+    # Find the index of the other contour closest to the given width away
+    hasMate = [None] * numPatches
+    for i, patchCenter1 in enumerate(patchCenters):
+        for j, patchCenter2 in enumerate(patchCenters):
+            if i == j:
+                continue
+            point1 = pixelsToGlobalPlane(patchCenter1, HT, invCalibMatrix)
+            point2 = pixelsToGlobalPlane(patchCenter2, HT, invCalibMatrix)
+            distance = np.linalg.norm(point1 - point2)
+            error = abs(distance - width)
+            isMate = error < allowedError
+            if isMate:
+                if hasMate[i] is None or error < hasMate[i][1]:
+                    hasMate[i] = (j, error)
+
+    # Pick the pairs of contours that both have each other as the best bet
+    accountedIndices = []
+    pairs = []
+    for i in xrange(numPatches):
+        if i in accountedIndices:
+            continue
+        elif hasMate[hasMate[i][0]][0] == i:
+            pairs.append((i, hasMate[i][0]))
+            accountedIndices.append(hasMate[i][0])
+
+    return pairs
+
+
+def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
+    """
+    TODO
+
+    Inputs
+        lastPoint: The position in meters of the last known global point
+    """
+    points = [
+        np.average(np.vstack(
+            (pixelsToGlobalPlane(patchCenters[i], HT, invCalibMatrix),
+             pixelsToGlobalPlane(patchCenters[j], HT, invCalibMatrix))
+        ), axis=0)
+        for i, j in pairs
+    ]
+    # TODO
+
+
 if __name__ == '__main__':
     import cv2
     from geometry.cameras import Camera
@@ -58,9 +129,16 @@ if __name__ == '__main__':
         cv2.findContours(intersectionImage.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(intersectionContours, contours, -1, (120), 3)
 
-    print("intersectionContours: {}".format(intersectionContours))
-    print("contours: {}".format(contours))
-    print("hierarchy: {}".format(hierarchy))
+    # print("intersectionContours: {}".format(intersectionContours))
+    # print("contours: {}".format(contours))
+    # print("hierarchy: {}".format(hierarchy))
 
-    cv2.imwrite("intersectionImage.png", intersectionImage)
-    cv2.imwrite("intersectionContours.png", intersectionContours)
+    # cv2.imwrite("intersectionImage.png", intersectionImage)
+    # cv2.imwrite("intersectionContours.png", intersectionContours)
+
+    invCalibMatrix = np.linalg.inv(camera.calibMatrix)
+    patchCenters = calcContourCenters(contours)
+    pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix)
+    finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix)
+    print(pairs)
+    print(patchCenters)
