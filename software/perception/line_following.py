@@ -83,7 +83,8 @@ def findPairsOnLineEdge(patchCenters, HT, invCalibMatrix, width=0.001, allowedEr
 
 def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
     """
-    TODO
+    Returns the global point (pixel points formed by averaging the pixel pairs)
+    that is closest to the previous point
 
     Inputs
         lastPoint: The position in meters of the last known global point
@@ -95,7 +96,8 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
         ), axis=0)
         for i, j in pairs
     ]
-    # TODO
+    distances = [np.linalg.norm(lastPoint - point) for point in points]
+    return points[distances.index(min(distances))]
 
 
 if __name__ == '__main__':
@@ -139,6 +141,14 @@ if __name__ == '__main__':
     invCalibMatrix = np.linalg.inv(camera.calibMatrix)
     patchCenters = calcContourCenters(contours)
     pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix)
-    finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix)
+    finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix, np.array([0.01, 0, 0]))
     print(pairs)
     print(patchCenters)
+    print(finalGlobalPoint)
+
+    finalPixel= np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
+    print(finalPixel)
+    center = tuple([int(x) for x in finalPixel])
+    frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
+    cv2.circle(frame, center, radius=10, thickness=1, color=0)
+    cv2.imwrite("framePlus.png", frame)

@@ -60,8 +60,6 @@ def globalToPixels(point, calibMatrix, HT=None, invHT=None):
                          " {}".format(point.shape))
     if len(point) == 3:
         point = np.vstack((point, 1))
-    print("invHT: {}".format(invHT))
-    print("point: {}".format(point))
     imFramePoint = invHT.dot(point)
     return imFrameToPixels(imFramePoint[0:3, 0], calibMatrix)
 
