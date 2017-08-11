@@ -3,12 +3,11 @@ import numpy as np
 from geometry.cameras import globalToPixels, pixelsToGlobalPlane
 
 
-def getCircularMask(shape, HT, calibMatrix, radius=0.03):
+def getCircularMask(shape, HT, invCalibMatrix, radius=0.03):
     """
     Returns an mask with shape `shape ` that zeroes out an image out except for
     a radius around the (0, 0, 0) toolframe point in global space
     """
-    invCalibMatrix = np.linalg.inv(calibMatrix)
     pixelCoords = np.array([[j, i, 1.0]
                             for i in xrange(shape[0])
                             for j in xrange(shape[1])]).T
@@ -21,9 +20,9 @@ def getCircularMask(shape, HT, calibMatrix, radius=0.03):
     return mask.reshape((shape))
 
 
-def getRingMask(shape, HT, calibMatrix, radius1, radius2):
-    mask1 = getCircularMask(shape, HT, calibMatrix, radius1)
-    mask2 = getCircularMask(shape, HT, calibMatrix, radius2)
+def getRingMask(shape, HT, invCalibMatrix, radius1, radius2):
+    mask1 = getCircularMask(shape, HT, invCalibMatrix, radius1)
+    mask2 = getCircularMask(shape, HT, invCalibMatrix, radius2)
     return np.logical_xor(mask1, mask2)
 
 
@@ -110,8 +109,8 @@ if __name__ == '__main__':
 
     camera = Camera()
     frameShape = (460, 621)
-    mask9mm = getCircularMask(frameShape, camera.HT, camera.calibMatrix, 0.009)
-    ring6to12 = getRingMask(frameShape, camera.HT, camera.calibMatrix, 0.006, 0.012)
+    mask9mm = getCircularMask(frameShape, camera.HT, camera.invCalibMatrix, 0.009)
+    ring6to12 = getRingMask(frameShape, camera.HT, camera.invCalibMatrix, 0.006, 0.012)
     kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
     threshold1 = 70
     threshold2 = 180
@@ -156,10 +155,9 @@ if __name__ == '__main__':
             # cv2.imwrite("intersectionImage.png", intersectionImage)
             # cv2.imwrite("intersectionContours.png", intersectionContours)
 
-            invCalibMatrix = np.linalg.inv(camera.calibMatrix)
             patchCenters = calcContourCenters(contours)
-            pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix, width=0.003)
-            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix, finalGlobalPoint)
+            pairs = findPairsOnLineEdge(patchCenters, camera.HT, camera.invCalibMatrix, width=0.003)
+            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, camera.invCalibMatrix, finalGlobalPoint)
             # print("finalGlobalPoint: {}".format(finalGlobalPoint))
 
             # finalPixel = np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))

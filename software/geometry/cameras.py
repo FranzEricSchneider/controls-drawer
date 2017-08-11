@@ -16,10 +16,12 @@ class Camera():
         exteriorCalibResults = pickle.load(
             open(navigation.getLatestExteriorCalibration(), "rb"))
         self.calibMatrix = intrinsicCalibResults['matrix']
+        self.invCalibMatrix = np.linalg.inv(self.calibMatrix)
         # Remember directionality:
         #   HT.dot(imFrame) = globalFrame
         #   inv(HT).dot(globalFrame) = imFrame
         self.HT = exteriorCalibResults['HT']
+        self.invHT = np.linalg.inv(self.HT)
 
 
 def pixelsToImFrame(pixelPoint, calibMatrix=None, invCalibMatrix=None):
@@ -86,3 +88,10 @@ def pixelsToGlobalPlane(pixelPoint, HT, invCalibMatrix):
         scalar = -camOrigin[2] / unscaledGlobalVectors[2, :]
         camOrigin = camOrigin.reshape((3, 1))
     return camOrigin + scalar * unscaledGlobalVectors
+
+
+# How resizing affects the intrinsic camera matrix
+# https://dsp.stackexchange.com/questions/6055/how-does-resizing-an-image-affect-the-intrinsic-camera-matrix
+# How cropping affects the intrinsic camera matrix
+# Clear but not detailed: https://stackoverflow.com/questions/22437737/opencv-camera-calibration-of-an-image-crop-roi-submatrix
+# Detailed but not clear: https://www.quora.com/In-camera-calibration-how-does-the-intrinsic-matrix-change-after-center-cropped-into-a-lower-resolution-image
