@@ -109,27 +109,30 @@ if __name__ == '__main__':
     from geometry.cameras import Camera
 
     camera = Camera()
+    frameShape = (460, 621)
+    mask9mm = getCircularMask(frameShape, camera.HT, camera.calibMatrix, 0.009)
+    ring6to12 = getRingMask(frameShape, camera.HT, camera.calibMatrix, 0.006, 0.012)
+    kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+    threshold1 = 70
+    threshold2 = 180
+
     # frame = cv2.imread("/home/eon-alone/projects/controls-drawer/results/calibration_images/frames_1500083160330210/frame_SL15_X3_Y1_1500086784094601.png", 0)
     # frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/post_threshold/frame*.png"))
     frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame*.png"))
+    frames = [cv2.imread(frameName, 0) for frameName in frameNames]
 
+    import cProfile
+    pr = cProfile.Profile()
+    pr.enable()
     finalGlobalPoint = np.array([0, 0.01, 0])
-    for frameName in frameNames:
-        frame = cv2.imread(frameName, 0)
-        mask9mm = getCircularMask(frame.shape, camera.HT, camera.calibMatrix, 0.009)
-        ring6to12 = getRingMask(frame.shape, camera.HT, camera.calibMatrix, 0.006, 0.012)
-
-        kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
-        threshold1 = 50
-        threshold2 = 200
+    for frame in frames:
         edges = cv2.Canny(frame, threshold1, threshold2)
         dilateEdges = cv2.dilate(edges, kernel, iterations=1)
-        ring6to12Edges = dilateEdges * ring6to12
 
         circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
         dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
-        intersection = (ring6to12Edges > 0) * (dilateCircleEdges9 > 0)
-        # cv2.imwrite("ring6to12Edges.png", ring6to12Edges)
+        intersection = (dilateEdges > 0) * (dilateCircleEdges9 > 0)
+        # cv2.imwrite("dilateEdges.png", dilateEdges)
         # cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
         # cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
 
@@ -143,11 +146,11 @@ if __name__ == '__main__':
 
         hasContours = True
         if len(contours) == 0:
-            print("Picture {} hopeless! No overlap in the ring".format(frameName))
+            # print("Picture {} hopeless! No overlap in the ring".format(frameName))
             hasContours = False
 
-        frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
-        colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
+        # frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
+        # colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
 
         if hasContours:
             # cv2.imwrite("intersectionImage.png", intersectionImage)
@@ -157,12 +160,17 @@ if __name__ == '__main__':
             patchCenters = calcContourCenters(contours)
             pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix, width=0.003)
             finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix, finalGlobalPoint)
-            print("finalGlobalPoint: {}".format(finalGlobalPoint))
+            # print("finalGlobalPoint: {}".format(finalGlobalPoint))
 
-            finalPixel= np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
-            center = tuple([int(x) for x in finalPixel])
-            cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
+            # finalPixel = np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
+            # center = tuple([int(x) for x in finalPixel])
+            # cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
 
-        cv2.imshow('frame_plus_identified_points', colorFrame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow('frame_plus_identified_points', colorFrame)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+    pr.disable()
+    import time
+    now = int(time.time() * 1e6)
+    pr.dump_stats("stats_{}.runsnake".format(now))
