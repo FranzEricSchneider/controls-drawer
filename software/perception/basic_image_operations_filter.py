@@ -53,7 +53,7 @@ class BasicOpsFilter():
             if "threshold" in inMsg.request.arg_names:
                 # Get the data as a frame
                 frame = lcm_msgs.image_t_to_nparray(outMsg)
-                # Get the threshold values. The formet is EITHER "int" (0-255)
+                # Get the threshold values. The format is EITHER "int" (0-255)
                 # or "otsu". Otsu thresholding is an opencv special case where
                 # an algorithm tries to split the image into background and
                 # foreground. It seems to work well on the paper
@@ -73,9 +73,9 @@ class BasicOpsFilter():
                     assert threshold >= 0
                     assert threshold <= 255
                     _, frame = cv2.threshold(frame,
-                                                     thresh=threshold,
-                                                     maxval=255,
-                                                     type=cv2.THRESH_BINARY)
+                                             thresh=threshold,
+                                             maxval=255,
+                                             type=cv2.THRESH_BINARY)
                     outMsg.data = lcm_msgs.nparray_to_image_t_data(frame)
                     outMsg.num_data = len(outMsg.data)
 

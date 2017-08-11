@@ -74,6 +74,8 @@ def findPairsOnLineEdge(patchCenters, HT, invCalibMatrix, width=0.001, allowedEr
     for i in xrange(numPatches):
         if i in accountedIndices:
             continue
+        elif hasMate[i] is None:
+            continue
         elif hasMate[hasMate[i][0]][0] == i:
             pairs.append((i, hasMate[i][0]))
             accountedIndices.append(hasMate[i][0])
@@ -102,53 +104,65 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
 
 if __name__ == '__main__':
     import cv2
+    import glob
+
     from geometry.cameras import Camera
 
     camera = Camera()
-    frame = cv2.imread("/home/eon-alone/projects/controls-drawer/results/calibration_images/frames_1500083160330210/frame_SL15_X3_Y1_1500086784094601.png", 0)
-    mask9mm = getCircularMask(frame.shape, camera.HT, camera.calibMatrix, 0.009)
-    ring6to12 = getRingMask(frame.shape, camera.HT, camera.calibMatrix, 0.006, 0.012)
+    # frame = cv2.imread("/home/eon-alone/projects/controls-drawer/results/calibration_images/frames_1500083160330210/frame_SL15_X3_Y1_1500086784094601.png", 0)
+    # frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/post_threshold/frame*.png"))
+    frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame*.png"))
 
-    kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
-    threshold1 = 50
-    threshold2 = 200
-    edges = cv2.Canny(frame, threshold1, threshold2)
-    dilateEdges = cv2.dilate(edges, kernel, iterations=1)
-    ring6to12Edges = dilateEdges * ring6to12
+    finalGlobalPoint = np.array([0, 0.01, 0])
+    for frameName in frameNames:
+        frame = cv2.imread(frameName, 0)
+        mask9mm = getCircularMask(frame.shape, camera.HT, camera.calibMatrix, 0.009)
+        ring6to12 = getRingMask(frame.shape, camera.HT, camera.calibMatrix, 0.006, 0.012)
 
-    circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
-    dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
-    intersection = (ring6to12Edges > 0) * (dilateCircleEdges9 > 0)
-    # cv2.imwrite("ring6to12Edges.png", ring6to12Edges)
-    # cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
-    # cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
+        kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+        threshold1 = 50
+        threshold2 = 200
+        edges = cv2.Canny(frame, threshold1, threshold2)
+        dilateEdges = cv2.dilate(edges, kernel, iterations=1)
+        ring6to12Edges = dilateEdges * ring6to12
 
-    # cv2.imwrite("mask9mm.png", mask9mm.astype('double') * 255)
-    # cv2.imwrite("ring6to12.png", ring6to12.astype('double') * 255)
+        circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
+        dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
+        intersection = (ring6to12Edges > 0) * (dilateCircleEdges9 > 0)
+        # cv2.imwrite("ring6to12Edges.png", ring6to12Edges)
+        # cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
+        # cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
 
-    intersectionImage = intersection.astype(np.uint8) * 255
-    intersectionContours, contours, hierarchy = \
-        cv2.findContours(intersectionImage.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(intersectionContours, contours, -1, (120), 3)
+        # cv2.imwrite("mask9mm.png", mask9mm.astype('double') * 255)
+        # cv2.imwrite("ring6to12.png", ring6to12.astype('double') * 255)
 
-    # print("intersectionContours: {}".format(intersectionContours))
-    # print("contours: {}".format(contours))
-    # print("hierarchy: {}".format(hierarchy))
+        intersectionImage = intersection.astype(np.uint8) * 255
+        intersectionContours, contours, hierarchy = \
+            cv2.findContours(intersectionImage.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(intersectionContours, contours, -1, (120), 3)
 
-    # cv2.imwrite("intersectionImage.png", intersectionImage)
-    # cv2.imwrite("intersectionContours.png", intersectionContours)
+        hasContours = True
+        if len(contours) == 0:
+            print("Picture {} hopeless! No overlap in the ring".format(frameName))
+            hasContours = False
 
-    invCalibMatrix = np.linalg.inv(camera.calibMatrix)
-    patchCenters = calcContourCenters(contours)
-    pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix)
-    finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix, np.array([0.01, 0, 0]))
-    print(pairs)
-    print(patchCenters)
-    print(finalGlobalPoint)
+        frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
+        colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
 
-    finalPixel= np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
-    print(finalPixel)
-    center = tuple([int(x) for x in finalPixel])
-    frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
-    cv2.circle(frame, center, radius=10, thickness=1, color=0)
-    cv2.imwrite("framePlus.png", frame)
+        if hasContours:
+            # cv2.imwrite("intersectionImage.png", intersectionImage)
+            # cv2.imwrite("intersectionContours.png", intersectionContours)
+
+            invCalibMatrix = np.linalg.inv(camera.calibMatrix)
+            patchCenters = calcContourCenters(contours)
+            pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCalibMatrix, width=0.003)
+            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCalibMatrix, finalGlobalPoint)
+            print("finalGlobalPoint: {}".format(finalGlobalPoint))
+
+            finalPixel= np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
+            center = tuple([int(x) for x in finalPixel])
+            cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
+
+        cv2.imshow('frame_plus_identified_points', colorFrame)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()

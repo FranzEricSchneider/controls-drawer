@@ -5,17 +5,17 @@ from utils import lcm_msgs
 
 def main():
     lc = lcm.LCM()
-    lc.subscribe("IMAGE_CROPPED", displayImage)
+    returnChannel = "IMAGE_RAW"
+    lc.subscribe(returnChannel, displayImage)
 
     ch = "REQUEST_IMAGE"
     msg = lcm_msgs.auto_instantiate(ch)
-    msg.format = msg.FORMAT_BGR
-    # msg.format = msg.FORMAT_GRAY
-    msg.n_arguments = 1
-    msg.arg_names.append("crop")
+    # msg.format = msg.FORMAT_BGR
+    msg.format = msg.FORMAT_GRAY
+    # msg.n_arguments = 1
+    # msg.arg_names.append("crop")
     # msg.arg_values.append("0,0,863,479")
-    msg.arg_values.append("100,10,463,300")
-    msg.dest_channel = "IMAGE_CROPPED"
+    msg.dest_channel = returnChannel
     lc.publish(ch, msg.encode())
 
     lc.handle()
