@@ -5,6 +5,7 @@ import numpy as np
 import select
 import time
 
+from geometry.cameras import cropImage
 from utils import lcm_msgs
 
 
@@ -36,15 +37,10 @@ class BasicOpsFilter():
                 corners = inMsg.request.arg_values[
                     inMsg.request.arg_names.index("crop")
                 ].split(",")
-                minX, minY, maxX, maxY = (int(field) for field in corners)
-                assert(np.all([m >= 0 for m in [minX, minY, maxX, maxY]]))
-                assert(np.all([m <= (inMsg.width - 1) for m in [minX, maxX]]))
-                assert(np.all([m <= (inMsg.height - 1) for m in [minY, maxY]]))
-                # Crop down the array
-                frame = frame[minY:maxY + 1, minX:maxX + 1]
+                frame = cropImage(frame, bounds=(int(field) for field in corners))
                 # Reset the image metadata
-                outMsg.width = maxX - minX + 1
-                outMsg.height = maxY - minY + 1
+                outMsg.width = frame.shape[1]
+                outMsg.height = frame.shape[0]
                 assert(outMsg.width <= inMsg.width)
                 assert(outMsg.height <= inMsg.height)
                 # Reset the image data

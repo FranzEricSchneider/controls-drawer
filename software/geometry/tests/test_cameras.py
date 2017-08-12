@@ -7,6 +7,7 @@ from geometry.cameras import pixelsToImFrame
 from geometry.cameras import imFrameToPixels
 from geometry.cameras import globalToPixels
 from geometry.cameras import pixelsToGlobalPlane
+from geometry.cameras import cropImage
 from geometry.planar import Rx, Ry, Rz
 from utils.geometry_tools import plotAxes
 
@@ -288,3 +289,45 @@ class TestPixelsToGlobalPlane():
         newPoint = pixelsToGlobalPlane(centerPoint, HT, invCalibMatrix)
         assert newPoint[0] > point[0]
         assert newPoint[1] > point[1]
+
+
+@pytest.fixture
+def image():
+    shape = (480, 640)
+    image = np.ones(shape) * 255.0
+    for i in xrange(0, shape[0], 10):
+        image[i, :] = 0.0
+    for j in xrange(0, shape[1], 10):
+        image[:, j] = 0.0
+    return image
+
+
+@pytest.fixture
+def cropBounds():
+    return (100, 200, 150, 275)
+
+
+class TestCropping():
+    def test_callable(self, image, cropBounds, calibMatrix):
+        newImage = cropImage(image, cropBounds)
+        newImage, newCalibMatrix = cropImage(image, cropBounds, calibMatrix)
+        # Check that the image didn't get overwritten
+        assert newImage.shape != image.shape
+
+    def test_size(self, image, cropBounds):
+        newImage = cropImage(image, cropBounds)
+        proposedShape = (cropBounds[1] - cropBounds[0], cropBounds[3] - cropBounds[2])
+        print newImage.shape
+        print proposedShape
+        assert newImage.shape == proposedShape
+
+    def test_match(self, image, cropBounds):
+        newImage = cropImage(image, cropBounds)
+        assert image[cropBounds[0], cropBounds[2]] == newImage[0, 0]
+        assert image[cropBounds[1] - 1, cropBounds[3] - 1] == newImage[-1, -1]
+
+    def test_calib_matrix(self, image, cropBounds, calibMatrix):
+        newImage, newCalibMatrix = cropImage(image, cropBounds, calibMatrix)
+        assert np.all(calibMatrix[:, 0:2] == newCalibMatrix[:, 0:2])
+        assert calibMatrix[0, 2] == newCalibMatrix[0, 2] + cropBounds[2]
+        assert calibMatrix[1, 2] == newCalibMatrix[1, 2] + cropBounds[0]

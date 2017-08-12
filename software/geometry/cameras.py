@@ -90,8 +90,36 @@ def pixelsToGlobalPlane(pixelPoint, HT, invCalibMatrix):
     return camOrigin + scalar * unscaledGlobalVectors
 
 
+def cropImage(image, bounds, calibMatrix=None):
+    """
+    Crops the image and adjusts the calibMatrix for that image appropriately.
+    The crop bounds will uniquely alter the calibMatrix so it will need to
+    stay bound with the image.
+
+    Bounds should be given in (iMin, iMax, jMin, jMax) form. Note that i
+    corresponds to Y and j to X. The max values are not inclusive
+
+    How cropping affects the intrinsic camera matrix
+    Clear but not detailed: https://stackoverflow.com/questions/22437737/opencv-camera-calibration-of-an-image-crop-roi-submatrix
+    Detailed but not clear: https://www.quora.com/In-camera-calibration-how-does-the-intrinsic-matrix-change-after-center-cropped-into-a-lower-resolution-image
+    """
+    iMin, iMax, jMin, jMax = bounds
+    # Do input checks
+    assert all([m >= 0 for m in [iMin, jMin, iMax, jMax]])
+    assert all([m <= (image.shape[0] - 1) for m in [iMin, iMax]])
+    assert all([m <= (image.shape[1] - 1) for m in [jMin, jMax]])
+    assert iMax > iMin
+    assert jMax > jMin
+    # Crop down the array
+    image = image[iMin:iMax, jMin:jMax]
+    if calibMatrix is None:
+        return image
+
+    newCalibMatrix = calibMatrix.copy()
+    newCalibMatrix[0, 2] -= jMin
+    newCalibMatrix[1, 2] -= iMin
+    return image, newCalibMatrix
+
+
 # How resizing affects the intrinsic camera matrix
 # https://dsp.stackexchange.com/questions/6055/how-does-resizing-an-image-affect-the-intrinsic-camera-matrix
-# How cropping affects the intrinsic camera matrix
-# Clear but not detailed: https://stackoverflow.com/questions/22437737/opencv-camera-calibration-of-an-image-crop-roi-submatrix
-# Detailed but not clear: https://www.quora.com/In-camera-calibration-how-does-the-intrinsic-matrix-change-after-center-cropped-into-a-lower-resolution-image
