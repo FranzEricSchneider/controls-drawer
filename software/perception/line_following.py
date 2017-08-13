@@ -1,6 +1,9 @@
 import numpy as np
 
-from geometry.cameras import globalToPixels, pixelsToGlobalPlane
+from geometry.cameras import globalToPixels
+from geometry.cameras import pixelsToGlobalPlane
+from geometry.cameras import getMaskBounds
+from geometry.cameras import cropImage
 
 
 def getCircularMask(shape, HT, invCalibMatrix, radius=0.03):
@@ -110,33 +113,35 @@ if __name__ == '__main__':
     camera = Camera()
     frameShape = (460, 621)
     mask9mm = getCircularMask(frameShape, camera.HT, camera.invCalibMatrix, 0.009)
-    ring6to12 = getRingMask(frameShape, camera.HT, camera.invCalibMatrix, 0.006, 0.012)
     kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
     threshold1 = 70
     threshold2 = 180
+    circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
+    dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
+
 
     # frame = cv2.imread("/home/eon-alone/projects/controls-drawer/results/calibration_images/frames_1500083160330210/frame_SL15_X3_Y1_1500086784094601.png", 0)
     # frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/post_threshold/frame*.png"))
     frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame*.png"))
     frames = [cv2.imread(frameName, 0) for frameName in frameNames]
-
-    import cProfile
-    pr = cProfile.Profile()
-    pr.enable()
     finalGlobalPoint = np.array([0, 0.01, 0])
+
+    # Set up cropped masks and calibration matrices so that we always crop to
+    # the outer ring + some pixels
+    maskBounds = getMaskBounds(mask9mm, pixBuffer=10)
+    croppedDilatedEdges9, croppedCalibMatrix = \
+        cropImage(dilateCircleEdges9, maskBounds, camera.calibMatrix)
+    invCroppedCalib = np.linalg.inv(croppedCalibMatrix)
+
+    # import cProfile
+    # pr = cProfile.Profile()
+    # pr.enable()
     for frame in frames:
-        edges = cv2.Canny(frame, threshold1, threshold2)
+        cropFrame = cropImage(frame, maskBounds)
+        edges = cv2.Canny(cropFrame, threshold1, threshold2)
         dilateEdges = cv2.dilate(edges, kernel, iterations=1)
 
-        circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
-        dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
-        intersection = (dilateEdges > 0) * (dilateCircleEdges9 > 0)
-        # cv2.imwrite("dilateEdges.png", dilateEdges)
-        # cv2.imwrite("dilateCircleEdges9.png", dilateCircleEdges9)
-        # cv2.imwrite("intersection.png", intersection.astype(np.uint8) * 255)
-
-        # cv2.imwrite("mask9mm.png", mask9mm.astype('double') * 255)
-        # cv2.imwrite("ring6to12.png", ring6to12.astype('double') * 255)
+        intersection = (dilateEdges > 0) * (croppedDilatedEdges9 > 0)
 
         intersectionImage = intersection.astype(np.uint8) * 255
         intersectionContours, contours, hierarchy = \
@@ -148,27 +153,26 @@ if __name__ == '__main__':
             # print("Picture {} hopeless! No overlap in the ring".format(frameName))
             hasContours = False
 
-        # frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
-        # colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
+        frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
+        colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
 
         if hasContours:
             # cv2.imwrite("intersectionImage.png", intersectionImage)
             # cv2.imwrite("intersectionContours.png", intersectionContours)
 
             patchCenters = calcContourCenters(contours)
-            pairs = findPairsOnLineEdge(patchCenters, camera.HT, camera.invCalibMatrix, width=0.003)
-            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, camera.invCalibMatrix, finalGlobalPoint)
-            # print("finalGlobalPoint: {}".format(finalGlobalPoint))
+            pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCroppedCalib, width=0.003)
+            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCroppedCalib, finalGlobalPoint)
 
-            # finalPixel = np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
-            # center = tuple([int(x) for x in finalPixel])
-            # cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
+            finalPixel = np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
+            center = tuple([int(x) for x in finalPixel])
+            cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
 
-        # cv2.imshow('frame_plus_identified_points', colorFrame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.imshow('frame_plus_identified_points', colorFrame)
+        cv2.waitKey(100)
+        cv2.destroyAllWindows()
 
-    pr.disable()
-    import time
-    now = int(time.time() * 1e6)
-    pr.dump_stats("stats_{}.runsnake".format(now))
+    # pr.disable()
+    # import time
+    # now = int(time.time() * 1e6)
+    # pr.dump_stats("stats_{}.runsnake".format(now))
