@@ -7,6 +7,7 @@ from geometry.cameras import pixelsToImFrame
 from geometry.cameras import imFrameToPixels
 from geometry.cameras import globalToPixels
 from geometry.cameras import pixelsToGlobalPlane
+from geometry.cameras import getMaskBounds
 from geometry.cameras import cropImage
 from geometry.planar import Rx, Ry, Rz
 from utils.geometry_tools import plotAxes
@@ -289,6 +290,42 @@ class TestPixelsToGlobalPlane():
         newPoint = pixelsToGlobalPlane(centerPoint, HT, invCalibMatrix)
         assert newPoint[0] > point[0]
         assert newPoint[1] > point[1]
+
+
+@pytest.fixture
+def mask():
+    return np.array([
+        [False, False, False, False, False, False, False, False],
+        [False, False, False, False, False, False, False, False],
+        [False, False, False, False, False, False, False, False],
+        [False, False, True, False, False, False, False, False],
+        [False, False, False, True, False, False, False, False],
+        [False, False, False, False, False, False, False, False],
+        [False, False, False, False, True, False, False, False],
+        [False, False, False, False, False, False, False, False],
+        [False, False, False, False, False, False, False, False],
+        [False, False, False, False, False, False, False, False],
+    ])
+
+
+class TestGetMaskBounds():
+    def test_callable(self, mask):
+        bounds = getMaskBounds(mask, pixBuffer=1)
+        bounds = getMaskBounds(mask)
+
+    def test_basic_results(self, mask):
+        bounds = getMaskBounds(mask, pixBuffer=1)
+        assert bounds == (2, 7, 1, 5)
+
+    def test_pix_buffer(self, mask):
+        bounds = getMaskBounds(mask, pixBuffer=10)
+        assert bounds == (0, 9, 0, 7)
+
+    def test_pix_buffer(self, mask):
+        bounds = getMaskBounds(mask, pixBuffer=0)
+        outwardBounds = getMaskBounds(mask, pixBuffer=1)
+        assert outwardBounds == (bounds[0] - 1, bounds[1] + 1,
+                                 bounds[2] - 1, bounds[3] + 1)
 
 
 @pytest.fixture

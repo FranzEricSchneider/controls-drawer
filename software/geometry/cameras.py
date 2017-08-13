@@ -90,6 +90,21 @@ def pixelsToGlobalPlane(pixelPoint, HT, invCalibMatrix):
     return camOrigin + scalar * unscaledGlobalVectors
 
 
+def getMaskBounds(mask, pixBuffer=5):
+    """
+    Takes a mask and returns the (iMin, iMax, jMin, jMax) bounds that offset
+    that mask by a `pixBuffer` pixels on either side
+    """
+    assert len(mask.shape) == 2
+    assert mask.dtype == np.bool
+    indices = np.argwhere(mask)
+    iMin = max(indices[:, 0].min() - pixBuffer, 0)
+    iMax = min(indices[:, 0].max() + pixBuffer, mask.shape[0] - 1)
+    jMin = max(indices[:, 1].min() - pixBuffer, 0)
+    jMax = min(indices[:, 1].max() + pixBuffer, mask.shape[1] - 1)
+    return (iMin, iMax, jMin, jMax)
+
+
 def cropImage(image, bounds, calibMatrix=None):
     """
     Crops the image and adjusts the calibMatrix for that image appropriately.
