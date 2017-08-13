@@ -104,10 +104,36 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
     return points[distances.index(min(distances))]
 
 
+def findsPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
+                      invCroppedCalibMatrix, pastGlobalPoint,
+                      threshold1=70, threshold2=180):
+    """
+    TODO:
+
+    Inputs:
+        pass
+    """
+    # Find edges in cropped frame
+    edges = cv2.Canny(cropImage(frame, bounds), threshold1, threshold2)
+    dilateEdges = cv2.dilate(edges, kernel, iterations=1)    
+
+    # Find contours where the image edges cross the ring of interest
+    intersection = (dilateEdges > 0) * (ringOfInterest > 0)
+    intersectionContours, contours, hierarchy = \
+        cv2.findContours(intersection.astype(np.uint8) * 255,
+                         cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) == 0:
+        return None
+
+    # Take contour pairs and find which one best matches up with the past point
+    patchCenters = calcContourCenters(contours)
+    pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCroppedCalib, width=0.003)
+    return calcFinalGlobalPoint(pairs, patchCenters, HT, invCroppedCalibMatrix, pastGlobalPoint)
+
+
 if __name__ == '__main__':
     import cv2
     import glob
-
     from geometry.cameras import Camera
 
     camera = Camera()
@@ -137,39 +163,29 @@ if __name__ == '__main__':
     # pr = cProfile.Profile()
     # pr.enable()
     for frame in frames:
-        cropFrame = cropImage(frame, maskBounds)
-        edges = cv2.Canny(cropFrame, threshold1, threshold2)
-        dilateEdges = cv2.dilate(edges, kernel, iterations=1)
+        # Find the point
+        foundPoint = findsPointInFrame(frame=frame,
+                                       bounds=maskBounds,
+                                       kernel=kernel,
+                                       ringOfInterest=croppedDilatedEdges9,
+                                       HT=camera.HT,
+                                       invCroppedCalibMatrix=invCroppedCalib,
+                                       pastGlobalPoint=finalGlobalPoint)
 
-        intersection = (dilateEdges > 0) * (croppedDilatedEdges9 > 0)
-
-        intersectionImage = intersection.astype(np.uint8) * 255
-        intersectionContours, contours, hierarchy = \
-            cv2.findContours(intersectionImage.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(intersectionContours, contours, -1, (120), 3)
-
-        hasContours = True
-        if len(contours) == 0:
-            # print("Picture {} hopeless! No overlap in the ring".format(frameName))
-            hasContours = False
-
+        # Prepare a color frame for diplay later
         frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
         colorFrame = cv2.cvtColor(frame,cv2.COLOR_GRAY2RGB)
 
-        if hasContours:
-            # cv2.imwrite("intersectionImage.png", intersectionImage)
-            # cv2.imwrite("intersectionContours.png", intersectionContours)
-
-            patchCenters = calcContourCenters(contours)
-            pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCroppedCalib, width=0.003)
-            finalGlobalPoint = calcFinalGlobalPoint(pairs, patchCenters, camera.HT, invCroppedCalib, finalGlobalPoint)
-
+        if foundPoint is None:
+            print("Picture {} hopeless! No overlap in the ring".format(frameName))
+        else:
+            finalGlobalPoint = foundPoint
             finalPixel = np.round(globalToPixels(finalGlobalPoint, camera.calibMatrix, HT=camera.HT))
             center = tuple([int(x) for x in finalPixel])
             cv2.circle(colorFrame, center, radius=15, thickness=2, color=(0, 0, 255))
 
         cv2.imshow('frame_plus_identified_points', colorFrame)
-        cv2.waitKey(100)
+        cv2.waitKey(1000)
         cv2.destroyAllWindows()
 
     # pr.disable()
