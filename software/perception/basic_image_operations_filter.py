@@ -33,7 +33,7 @@ class BasicOpsFilter():
             if "crop" in inMsg.request.arg_names:
                 # Get the data as a frame
                 frame = lcm_msgs.image_t_to_nparray(outMsg)
-                # Get the crop values. Format is "mx,my,Mx,My"
+                # Get the crop values. Format is "iMin,iMax,jMin,jMax"
                 corners = inMsg.request.arg_values[
                     inMsg.request.arg_names.index("crop")
                 ].split(",")

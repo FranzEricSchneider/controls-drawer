@@ -104,9 +104,9 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
     return points[distances.index(min(distances))]
 
 
-def findsPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
-                      invCroppedCalibMatrix, pastGlobalPoint,
-                      threshold1=70, threshold2=180):
+def findPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
+                     invCroppedCalibMatrix, pastGlobalPoint,
+                     threshold1=70, threshold2=180):
     """
     TODO:
 
@@ -164,13 +164,13 @@ if __name__ == '__main__':
     # pr.enable()
     for frame in frames:
         # Find the point
-        foundPoint = findsPointInFrame(frame=frame,
-                                       bounds=maskBounds,
-                                       kernel=kernel,
-                                       ringOfInterest=croppedDilatedEdges9,
-                                       HT=camera.HT,
-                                       invCroppedCalibMatrix=invCroppedCalib,
-                                       pastGlobalPoint=finalGlobalPoint)
+        foundPoint = findPointInFrame(frame=frame,
+                                      bounds=maskBounds,
+                                      kernel=kernel,
+                                      ringOfInterest=croppedDilatedEdges9,
+                                      HT=camera.HT,
+                                      invCroppedCalibMatrix=invCroppedCalib,
+                                      pastGlobalPoint=finalGlobalPoint)
 
         # Prepare a color frame for diplay later
         frame *= np.logical_not(dilateCircleEdges9.astype('bool'))

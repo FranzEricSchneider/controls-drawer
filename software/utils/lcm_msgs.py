@@ -8,7 +8,9 @@ import lcmtypes
 KNOWN_MESSAGES = {
     'IMAGE_CALIB' : lcmtypes.image_t,
     'IMAGE_CROPPED' : lcmtypes.image_t,
+    'IMAGE_NOOP' : lcmtypes.image_t,
     'IMAGE_RAW' : lcmtypes.image_t,
+    'IMAGE_TRACKING' : lcmtypes.image_t,
     'POSITION_COMMAND' : lcmtypes.relative_position_t,
     'REQUEST_IMAGE' : lcmtypes.image_request_t,
     'TABLE_STATE' : lcmtypes.table_state_t,
