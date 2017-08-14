@@ -43,9 +43,7 @@ To take pictures using the camera driver
 
 # Run the camera driver with a flag that saves every image when triggered
 python software/drivers/crenova_iscope_endoscope_2Mpix/camera_driver.py --save-images
-# Edit the image requester until you have a simple request
-subl software/drivers/general_camera_tests/test_image_request.py
-python software/drivers/general_camera_tests/test_image_request.py
+python software/drivers/general_camera_tests/image_request.py
 ###############################################################################
 
 
