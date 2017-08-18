@@ -14,7 +14,7 @@ struct table_state_t
     int32_t encoder_y;  // In encoder steps
 
     double tool_frame[4][4];  // HT representing transformation from global to
-    						  // the tool frame
+                              // the tool frame
     double camera_frame[4][4];  // HT representing transformation from global
-    						    // to the camera
+                                // to the camera
 }

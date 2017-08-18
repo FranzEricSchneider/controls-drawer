@@ -15,7 +15,7 @@ class BasicOpsFilter():
         self.requestSub = self.lcmobj.subscribe(args.input_channel,
                                                 self.handleRequest)
 
-    def run(self, loopTimeout=0.05):
+    def run(self):
         while(True):
             # This is blocking, which is fine because all this does is wait
             #   until an image comes in and then handle it, wait for the next

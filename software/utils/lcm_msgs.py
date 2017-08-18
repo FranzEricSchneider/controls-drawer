@@ -42,6 +42,6 @@ def image_t_to_nparray(image_t):
     return frame
 
 def lcmobj_handle_msg(lcmobj, timeout=0.005):
-    rfds, wfds, efds = select.select([lcmobj.fileno()], [], [], timeout)
+    rfds, _, _ = select.select([lcmobj.fileno()], [], [], timeout)
     if rfds:
         lcmobj.handle()

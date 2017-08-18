@@ -1,27 +1,27 @@
 package lcmtypes;
 struct image_t {
-  // timestamp
-  int64_t utime;
+    // timestamp
+    int64_t utime;
 
-  // Unique identifier for connected actions
-  int64_t action_id;
+    // Unique identifier for connected actions
+    int64_t action_id;
 
-  // Take the image request with you to preserve arguments, action_id, and
-  // dest_channel
-  image_request_t request;
+    // Take the image request with you to preserve arguments, action_id, and
+    // dest_channel
+    image_request_t request;
 
-  // Image size and row length (pixels)
-  int16_t width;
-  int16_t height;
-  // Size of a row in bytes (width * pixel size in bytes)
-  int16_t row_stride;
+    // Image size and row length (pixels)
+    int16_t width;
+    int16_t height;
+    // Size of a row in bytes (width * pixel size in bytes)
+    int16_t row_stride;
 
-  // Image settings, which are important will be different by camera
-  int16_t FPS;
-  float brightness;
-  float contrast;
+    // Image settings, which are important will be different by camera
+    int16_t FPS;
+    float brightness;
+    float contrast;
 
-  // Image data
-  int32_t num_data;
-  int16_t data[num_data];
+    // Image data
+    int32_t num_data;
+    int16_t data[num_data];
 }
