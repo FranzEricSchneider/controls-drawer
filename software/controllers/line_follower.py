@@ -110,7 +110,7 @@ if __name__ == '__main__':
                         default="proportional")
     parser.add_argument("-i", "--image-channel",
                         help="Channel on which to track line position",
-                        default="RGBD_RAW")
+                        default="IMAGE_RAW")
     parser.add_argument("-t", "--table-channel",
                         help="Channel on which to send table commands",
                         default="POSITION_COMMAND")

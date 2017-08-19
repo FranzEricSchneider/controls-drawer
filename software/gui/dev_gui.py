@@ -16,7 +16,7 @@ class DevGUI():
 
         # Display image: https://stackoverflow.com/questions/23901168/how-do-i-insert-a-jpeg-image-into-a-python-tkinter-window
         # Path to image
-        path = "../../results/calibration_images/frames_1500083160330210/frame_SL15_X-19_Y19_1500086879164741.png"
+        path = "/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame_1502414920918577.png"
         import cv2
         frame = cv2.imread(path)
         #Creates a Tkinter-compatible photo image, which can be used everywhere Tkinter expects an image object.
@@ -25,6 +25,10 @@ class DevGUI():
         panel = tk.Label(self.window, image = img)
         #The Pack geometry manager packs widgets in rows or columns.
         panel.pack(side = "bottom", fill = "both", expand = "yes")
+        # TODO
+        # Okay, the reason I don't know how to use the GUI yet is that I need
+        # to call lcmobj.handle() to get onImage to work but the mainloop is
+        # running and isn't calling handle()
         self.window.mainloop()
 
     def setupWindow(self):
