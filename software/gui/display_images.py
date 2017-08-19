@@ -11,8 +11,7 @@ class DisplayImages():
     def __init__(self, args):
         self.lcmobj = lcm.LCM()
         self.lcmobj.subscribe(args.image_channel, self.onImage)
-        self.frame = None
-        self.newFrame = False
+        self.displayMilliseconds = args.display_milliseconds
 
     def run(self):
         while True:
@@ -24,17 +23,20 @@ class DisplayImages():
         cv2.startWindowThread()
         # Decode/parse out the image
         msg = lcm_msgs.auto_decode(channel, data)
-        self.frame = lcm_msgs.image_t_to_nparray(msg)
-        self.newFrame = True
+        frame = lcm_msgs.image_t_to_nparray(msg)
         # Display the resulting frame
-        cv2.imshow(channel, self.frame)
-        cv2.waitKey(1000)
+        cv2.imshow(channel, frame)
+        cv2.waitKey(self.displayMilliseconds)
         cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Starts a basic image displayer",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-d", "--display-milliseconds",
+                        help="How long to display each image",
+                        type=int,
+                        default=1000)
     parser.add_argument("-i", "--image-channel",
                         help="Channel on which to track line position",
                         default="IMAGE_RAW")

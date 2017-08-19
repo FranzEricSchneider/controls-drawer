@@ -52,6 +52,7 @@ class LineFollower():
             now = time.time()
             if now >= self.lastCommandTime + self.commandPeriod:
                 self.commandTable()
+                self.lastCommandTime = now
 
     def onImage(self, channel, data):
         # Decode/parse out the image
@@ -72,7 +73,7 @@ class LineFollower():
             if self.plotPoint:
                 self.republishPoint(image, frame)
 
-    def republishPoint(inMsg, frame):
+    def republishPoint(self, inMsg, frame):
         # Set up the image
         channel = "IMAGE_TRACKING"
         outMsg = deepcopy(inMsg)
@@ -99,6 +100,7 @@ class LineFollower():
         msg = lcm_msgs.auto_instantiate(self.tableChannel)
         msg.position = direction * stepSize
         msg.velocity = TRAVEL_SPEED
+        print("Publishing relative command {} with velocity {}".format(msg.position, msg.velocity))
         self.lcmobj.publish(self.tableChannel, msg.encode())
 
 
@@ -121,3 +123,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     LF = LineFollower(args)
+    LF.run()

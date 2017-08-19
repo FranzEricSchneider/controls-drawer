@@ -53,3 +53,16 @@ How to threshold images
 # Look in basic_image_operations_filter.py to see the basic threshold code
 # Turn this into a tool if you use it often
 ###############################################################################
+
+
+###############################################################################
+How to run the line follower
+cd projects/controls-drawer
+source env.sh
+
+python software/drivers/cnc_table/position_driver_2d.py
+python software/drivers/crenova_iscope_endoscope_2Mpix/camera_driver.py
+python software/drivers/general_camera_tests/image_request.py --stream
+python software/gui/display_images.py --image-channel IMAGE_TRACKING
+python software/controllers/line_follower.py
+###############################################################################

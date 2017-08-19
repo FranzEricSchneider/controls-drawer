@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 
 from geometry.cameras import globalToPixels
@@ -127,7 +128,7 @@ def findPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
 
     # Take contour pairs and find which one best matches up with the past point
     patchCenters = calcContourCenters(contours)
-    pairs = findPairsOnLineEdge(patchCenters, camera.HT, invCroppedCalib, width=0.003)
+    pairs = findPairsOnLineEdge(patchCenters, HT, invCroppedCalibMatrix, width=0.003)
     return calcFinalGlobalPoint(pairs, patchCenters, HT, invCroppedCalibMatrix, pastGlobalPoint)
 
 
