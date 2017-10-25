@@ -4,12 +4,14 @@ if [ -z ${CNC_DRAWER_SOFTWARE+x} ]; then
 else
 	# Build the LCM messages
 	cd ${CNC_DRAWER_SOFTWARE}/messages
-	lcm-gen -p lcmtypes_image_t.lcm
-	lcm-gen -p lcmtypes_image_request_t.lcm
-	lcm-gen -p lcmtypes_relative_position_t.lcm
-	lcm-gen -p lcmtypes_tool_state_t.lcm
-	lcm-gen -p lcmtypes_table_state_t.lcm
-	lcm-gen -p lcmtypes_velocity_t.lcm
+	lcm-gen -pj lcmtypes_image_t.lcm
+	lcm-gen -pj lcmtypes_image_request_t.lcm
+	lcm-gen -pj lcmtypes_relative_position_t.lcm
+	lcm-gen -pj lcmtypes_tool_state_t.lcm
+	lcm-gen -pj lcmtypes_table_state_t.lcm
+	lcm-gen -pj lcmtypes_velocity_t.lcm
+	javac -cp lcm.jar lcmtypes/*.java  # lcm.jar can be linked from /usr/share/local/java/
+	jar cf controls-drawer.jar lcmtypes/*.class
 	echo "Built LCM messages in $(pwd)"
 	cd ${CNC_DRAWER_BASE}
 fi
