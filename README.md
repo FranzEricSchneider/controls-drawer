@@ -56,6 +56,8 @@ How to threshold images
 
 
 ###############################################################################
+[This works but it often has a position command of 0]
+###############################################################################
 How to run the line follower
 cd projects/controls-drawer
 source env.sh

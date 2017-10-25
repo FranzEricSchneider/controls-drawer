@@ -1,4 +1,4 @@
 TODO:
 
-Things to do next
--- Figure out how to go from camera+calibration to 3D points on plane
+Improve the line tracking until it is good
+Get the Arduino with sensors integrated in
