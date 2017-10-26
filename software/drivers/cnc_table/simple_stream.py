@@ -50,7 +50,7 @@ lines = ["G21",  # Program coordinates are in mm
          # "$$"]  # Display the settings
          "$$",  # Display the settings
          "G01 F1500",  # Move in a straight line, feedrate 1500 (mm/min as defined by G21/G94)
-         "X-150 Y-150"]  # Because of G01, this should move X and Y by their units
+         "X0.5 Y0.5"]  # Because of G01, this should move X and Y by their units
 
 # These do different things according to what is commented out
 # scalar = 8

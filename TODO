@@ -1,4 +1,6 @@
 TODO:
 
 Improve the line tracking until it is good
+	- Find some way to view the identified points after the fact
+	- Figure out how long the table driver is getting behind - that kills
 Get the Arduino with sensors integrated in

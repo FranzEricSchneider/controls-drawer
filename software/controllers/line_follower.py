@@ -1,5 +1,4 @@
 import argparse
-from copy import deepcopy
 import cv2
 import lcm
 import numpy as np
@@ -25,7 +24,7 @@ class LineFollower():
         # Set an initial starting point for the tracking
         self.targetPoint = np.array([0, 0.01, 0])
         # Whether to re-publish the image with the IDed point
-        self.plotPoint = True
+        self.plotPoint = False
 
     def setupMasks(self):
         self.camera = Camera()
@@ -72,11 +71,18 @@ class LineFollower():
             self.targetPoint = foundPoint
             if self.plotPoint:
                 self.republishPoint(image, frame)
+        else:
+            print "None!"
 
     def republishPoint(self, inMsg, frame):
         # Set up the image
         channel = "IMAGE_TRACKING"
-        outMsg = deepcopy(inMsg)
+        outMsg = lcm_msgs.auto_instantiate(channel)
+        # Copy message except for the image data
+        for slot in outMsg.__slots__:
+            if slot in ['data', 'num_data']:
+                continue
+            setattr(outMsg, slot, getattr(inMsg, slot))
         # Plot the point
         frame *= np.logical_not(self.ring.astype('bool'))
         colorFrame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)

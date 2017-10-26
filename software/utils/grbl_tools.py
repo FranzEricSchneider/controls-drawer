@@ -34,7 +34,7 @@ def makeCmd(xPos, yPos, speed):
     """
     Takes position and speed commands in m and m/s and returns in GRBL format
     """
-    return "X{} Y{} F{}".format(mToMM(xPos), mToMM(yPos), mpsToMMPMin(speed))
+    return "X{:.2f} Y{:.2f} F{}".format(mToMM(xPos), mToMM(yPos), mpsToMMPMin(speed))
 
 
 def sendLines(serialConnection, lines, debug=False):
@@ -93,8 +93,8 @@ def retreat(offerRetreat, serialConnection, position):
 
 
 def mToMM(value):
-    ''' Converts values in m (float) to mm (int). Works for m and m/s '''
-    return int(value * 1e3)
+    ''' Converts values in m to mm. Works for m and m/s '''
+    return value * 1e3
 
 
 def mmToM(value):

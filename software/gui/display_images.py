@@ -13,6 +13,8 @@ from utils import lcm_msgs
 
 class DisplayImages():
     def __init__(self, args):
+        print "KILL THE GUI WITH CNTL-C FROM TERMINAL"
+        print "Otherwise you'll need cntl-z"
         # Set up LCM stuff
         self.lcmobj = lcm.LCM()
         self.lcmobj.subscribe(args.image_channel, self.onImage)

@@ -89,7 +89,8 @@ def findPairsOnLineEdge(patchCenters, HT, invCalibMatrix, width=0.001, allowedEr
 def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
     """
     Returns the global point (pixel points formed by averaging the pixel pairs)
-    that is closest to the previous point
+    that is closest to the previous point, and None if no valid points are
+    found
 
     Inputs
         lastPoint: The position in meters of the last known global point
@@ -102,7 +103,11 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
         for i, j in pairs
     ]
     distances = [np.linalg.norm(lastPoint - point) for point in points]
-    return points[distances.index(min(distances))]
+    try:
+        return points[distances.index(min(distances))]
+    except ValueError:
+        # If distances is [] then we come here
+        return None
 
 
 def findPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
