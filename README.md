@@ -56,8 +56,6 @@ How to threshold images
 
 
 ###############################################################################
-[This works but it often has a position command of 0]
-###############################################################################
 How to run the line follower
 cd projects/controls-drawer
 source env.sh
@@ -65,6 +63,7 @@ source env.sh
 python software/drivers/cnc_table/position_driver_2d.py
 python software/drivers/crenova_iscope_endoscope_2Mpix/camera_driver.py
 python software/drivers/general_camera_tests/image_request.py --stream
-python software/gui/display_images.py --image-channel IMAGE_TRACKING
+python software/gui/display_images.py --image-channel IMAGE_TRACKING --include-points
+[lcm-logger]
 python software/controllers/line_follower.py
 ###############################################################################

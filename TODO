@@ -1,6 +1,8 @@
 TODO:
 
 Improve the line tracking until it is good
-	- Find some way to view the identified points after the fact
-	- Figure out how long the table driver is getting behind - that kills
+    - Figure out how long the table driver is getting behind - it's better than
+        I thought it was originally (back when it was publishing every 0.3
+        seconds) but it's still a bit behind
+    - Figure out why we sometimes drift because the target is frozen
 Get the Arduino with sensors integrated in
