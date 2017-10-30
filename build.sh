@@ -5,6 +5,7 @@ else
 	# Build the LCM messages
 	cd ${CNC_DRAWER_SOFTWARE}/messages
 	lcm-gen -pj lcmtypes_image_t.lcm
+	lcm-gen -pj lcmtypes_image_points_2d_t.lcm
 	lcm-gen -pj lcmtypes_image_request_t.lcm
 	lcm-gen -pj lcmtypes_relative_position_t.lcm
 	lcm-gen -pj lcmtypes_tool_state_t.lcm

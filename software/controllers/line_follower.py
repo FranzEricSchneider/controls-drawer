@@ -69,12 +69,26 @@ class LineFollower():
         # If we found a viable point, save it as the current tracked point
         if foundPoint is not None:
             self.targetPoint = foundPoint
+            self.publishFoundPoint()
             if self.plotPoint:
-                self.republishPoint(image, frame)
+                self.publishFoundPointImage(image, frame)
         else:
             print "None!"
 
-    def republishPoint(self, inMsg, frame):
+    def publishFoundPoint(self):
+        # Set up message
+        channel = 'IMAGE_POINTS_OF_INTEREST'
+        outMsg = lcm_msgs.auto_instantiate(channel)
+        outMsg.utime = lcm_msgs.utime_now()
+        outMsg.num_points = 1
+        # Pack point data
+        pixel = self.targetPixel
+        outMsg.axis_1 = [int(pixel[0])]
+        outMsg.axis_2 = [int(pixel[1])]
+        # Publish
+        self.lcmobj.publish(channel, outMsg.encode())
+
+    def publishFoundPointImage(self, inMsg, frame):
         # Set up the image
         channel = "IMAGE_TRACKING"
         outMsg = lcm_msgs.auto_instantiate(channel)
@@ -86,11 +100,8 @@ class LineFollower():
         # Plot the point
         frame *= np.logical_not(self.ring.astype('bool'))
         colorFrame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-        finalPixel = tuple([int(x)
-                            for x in np.round(globalToPixels(self.targetPoint,
-                                                             self.camera.calibMatrix,
-                                                             HT=self.camera.HT))])
-        cv2.circle(colorFrame, finalPixel, radius=15, thickness=2, color=(0, 0, 255))
+        cv2.circle(colorFrame, self.targetPixel, radius=15, thickness=2,
+                   color=(0, 0, 255))
         # Write the image data
         outMsg.request.format = outMsg.request.FORMAT_BGR
         outMsg.data = lcm_msgs.nparray_to_image_t_data(colorFrame)
@@ -108,6 +119,13 @@ class LineFollower():
         msg.velocity = TRAVEL_SPEED
         print("Publishing relative command {} with velocity {}".format(msg.position, msg.velocity))
         self.lcmobj.publish(self.tableChannel, msg.encode())
+
+    @property
+    def targetPixel(self):
+        return tuple([int(x)
+                      for x in np.round(globalToPixels(self.targetPoint,
+                                                       self.camera.calibMatrix,
+                                                       HT=self.camera.HT))])
 
 
 if __name__ == '__main__':

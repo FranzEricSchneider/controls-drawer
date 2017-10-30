@@ -1,0 +1,8 @@
+package lcmtypes;
+struct image_points_2d_t
+{
+    int64_t utime;
+    int16_t num_points;
+    int64_t axis_1[num_points];
+    int64_t axis_2[num_points];
+}
