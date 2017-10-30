@@ -18,7 +18,10 @@ class DisplayImages():
         # Set up LCM stuff
         self.lcmobj = lcm.LCM()
         self.lcmobj.subscribe(args.image_channel, self.onImage)
+        if args.include_points:
+            self.lcmobj.subscribe('IMAGE_POINTS_OF_INTEREST', self.onPoints)
         # Set up thread stuff
+        self.points = None
         self.queue = Queue.Queue()
         self.flag = threading.Event()
         signal.signal(signal.SIGINT, self.signalHandler)
@@ -36,9 +39,17 @@ class DisplayImages():
         sys.exit(0)
 
     def onImage(self, channel, data):
-        self.queue.put(
-            lcm_msgs.image_t_to_nparray(lcm_msgs.auto_decode(channel, data))
-        )
+        image = lcm_msgs.image_t_to_nparray(lcm_msgs.auto_decode(channel, data))
+        if self.points is not None:
+            for point in self.points:
+                pixel = tuple([int(x) for x in point])
+                cv2.circle(image, pixel, radius=15, thickness=2, color=127)
+        self.queue.put(image)
+
+    def onPoints(self, channel, data):
+        msg = lcm_msgs.auto_decode(channel, data)
+        self.points = [[msg.axis_1[i], msg.axis_2[i]]
+                       for i in range(msg.num_points)]
 
 
 def displayImage(queue, flag):
@@ -66,6 +77,9 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--image-channel",
                         help="Channel on which to track line position",
                         default="IMAGE_RAW")
+    parser.add_argument("-p", "--include-points",
+                        help="Boolean, includes points of interest",
+                        action="store_true")
     args = parser.parse_args()
 
     DI = DisplayImages(args)
