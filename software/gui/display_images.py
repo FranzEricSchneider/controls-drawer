@@ -43,7 +43,7 @@ class DisplayImages():
         if self.points is not None:
             for point in self.points:
                 pixel = tuple([int(x) for x in point])
-                cv2.circle(image, pixel, radius=15, thickness=2, color=127)
+                cv2.circle(image, pixel, radius=13, thickness=2, color=127)
         self.queue.put(image)
 
     def onPoints(self, channel, data):

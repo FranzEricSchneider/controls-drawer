@@ -5,4 +5,5 @@ Improve the line tracking until it is good
         I thought it was originally (back when it was publishing every 0.3
         seconds) but it's still a bit behind
     - Figure out why we sometimes drift because the target is frozen
+    - Find the whole line instead of a crossing point
 Get the Arduino with sensors integrated in

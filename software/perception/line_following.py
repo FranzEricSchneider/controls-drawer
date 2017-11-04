@@ -5,6 +5,8 @@ from geometry.cameras import globalToPixels
 from geometry.cameras import pixelsToGlobalPlane
 from geometry.cameras import getMaskBounds
 from geometry.cameras import cropImage
+from utils.lcm_msgs import auto_decode
+from utils.lcm_msgs import image_t_to_nparray
 
 
 def getCircularMask(shape, HT, invCalibMatrix, radius=0.03):
@@ -62,6 +64,11 @@ def findPairsOnLineEdge(patchCenters, HT, invCalibMatrix, width=0.001, allowedEr
         for j, patchCenter2 in enumerate(patchCenters):
             if i == j:
                 continue
+
+            # TODO: Consider the speed aspect and don't recalculate the pixel
+            #       to global relationship n^2 times when you could do it n
+            #       times
+
             point1 = pixelsToGlobalPlane(patchCenter1, HT, invCalibMatrix)
             point2 = pixelsToGlobalPlane(patchCenter2, HT, invCalibMatrix)
             distance = np.linalg.norm(point1 - point2)
@@ -95,6 +102,8 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
     Inputs
         lastPoint: The position in meters of the last known global point
     """
+    # TODO: Test for speed and consider speeding this up by instead converting
+    #       lastPoint into pixel coordinate and comparing pixel differences
     points = [
         np.average(np.vstack(
             (pixelsToGlobalPlane(patchCenters[i], HT, invCalibMatrix),
@@ -111,13 +120,13 @@ def calcFinalGlobalPoint(pairs, patchCenters, HT, invCalibMatrix, lastPoint):
 
 
 def findPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
-                     invCroppedCalibMatrix, pastGlobalPoint,
+                     invCroppedCalibMatrix, pastGlobalPoint, width=0.003,
                      threshold1=70, threshold2=180):
     """
     TODO:
 
     Inputs:
-        pass
+        TODO
     """
     # Find edges in cropped frame
     edges = cv2.Canny(cropImage(frame, bounds), threshold1, threshold2)
@@ -133,8 +142,10 @@ def findPointInFrame(frame, bounds, kernel, ringOfInterest, HT,
 
     # Take contour pairs and find which one best matches up with the past point
     patchCenters = calcContourCenters(contours)
-    pairs = findPairsOnLineEdge(patchCenters, HT, invCroppedCalibMatrix, width=0.003)
-    return calcFinalGlobalPoint(pairs, patchCenters, HT, invCroppedCalibMatrix, pastGlobalPoint)
+    pairs = findPairsOnLineEdge(patchCenters, HT, invCroppedCalibMatrix,
+                                width=width)
+    return calcFinalGlobalPoint(pairs, patchCenters, HT, invCroppedCalibMatrix,
+                                pastGlobalPoint)
 
 
 if __name__ == '__main__':
@@ -150,12 +161,24 @@ if __name__ == '__main__':
     threshold2 = 180
     circleEdges9 = cv2.Canny(mask9mm.astype(np.uint8) * 255, threshold1, threshold2)
     dilateCircleEdges9 = cv2.dilate(circleEdges9, kernel, iterations=1)
-
+    width = 0.002
 
     # frame = cv2.imread("/home/eon-alone/projects/controls-drawer/results/calibration_images/frames_1500083160330210/frame_SL15_X3_Y1_1500086784094601.png", 0)
     # frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/post_threshold/frame*.png"))
-    frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame*.png"))
-    frames = [cv2.imread(frameName, 0) for frameName in frameNames]
+    # frameNames = sorted(glob.glob("/home/eon-alone/projects/controls-drawer/results/line_following/test_8_10/frame*.png"))
+    # frames = [cv2.imread(frameName, 0) for frameName in frameNames]
+
+    import lcm
+    good_utimes = [1509330216529368, 1509330216627868, 1509330216728825, 1509330216834332, 1509330216930756, 1509330217034101, 1509330217131165, 1509330217231357, 1509330217328597, 1509330217434614, 1509330217535127, 1509330217631806, 1509330217731755, 1509330217831779, 1509330217934868, 1509330218030021, 1509330218130679, 1509330218237284, 1509330218334279, 1509330218434172, 1509330218532731, 1509330218637267, 1509330218732012, 1509330218834588, 1509330218937336, 1509330219036061, 1509330219139660, 1509330219338095, 1509330219436881, 1509330219536097, 1509330219637484, 1509330219739777, 1509330219834151, 1509330219941932, 1509330220038227, 1509330220136414, 1509330220235189, 1509330220338863, 1509330220541411, 1509330220636081, 1509330221843285, 1509330221980431, 1509330223549131, 1509330223680151, 1509330223744502, 1509330223948095, 1509330224048316, 1509330224181165, 1509330224247384, 1509330224381555, 1509330224585291, 1509330224655548, 1509330224750438, 1509330224887206, 1509330224949192, 1509330225092424, 1509330225351838, 1509330225790952, 1509330226592358, 1509330226658098, 1509330226785008, 1509330226858883, 1509330226952589, 1509330227091694, 1509330227153385, 1509330227292016, 1509330227356853, 1509330227453889, 1509330227591879, 1509330227653898, 1509330227791592, 1509330227859639, 1509330229057569]
+    log = lcm.EventLog("/home/eon-alone/projects/controls-drawer/results/line_following/test_10_29/lcmlog-2017-10-29_points_of_interest")
+    channel = "IMAGE_RAW"
+    frames = [image_t_to_nparray(auto_decode(event.channel, event.data))
+              for event in log
+              if (event.channel == channel and
+                  auto_decode(event.channel, event.data).utime in good_utimes)]
+    assert len(good_utimes) == len(frames)
+    frameNames = ["{}".format(utime) for utime in good_utimes]
+
     finalGlobalPoint = np.array([0, 0.01, 0])
 
     # Set up cropped masks and calibration matrices so that we always crop to
@@ -165,10 +188,7 @@ if __name__ == '__main__':
         cropImage(dilateCircleEdges9, maskBounds, camera.calibMatrix)
     invCroppedCalib = np.linalg.inv(croppedCalibMatrix)
 
-    # import cProfile
-    # pr = cProfile.Profile()
-    # pr.enable()
-    for frame in frames:
+    for frame, frameName in zip(frames, frameNames):
         # Find the point
         foundPoint = findPointInFrame(frame=frame,
                                       bounds=maskBounds,
@@ -176,7 +196,8 @@ if __name__ == '__main__':
                                       ringOfInterest=croppedDilatedEdges9,
                                       HT=camera.HT,
                                       invCroppedCalibMatrix=invCroppedCalib,
-                                      pastGlobalPoint=finalGlobalPoint)
+                                      pastGlobalPoint=finalGlobalPoint,
+                                      width=width)
 
         # Prepare a color frame for diplay later
         frame *= np.logical_not(dilateCircleEdges9.astype('bool'))
@@ -193,8 +214,3 @@ if __name__ == '__main__':
         cv2.imshow('frame_plus_identified_points', colorFrame)
         cv2.waitKey(1000)
         cv2.destroyAllWindows()
-
-    # pr.disable()
-    # import time
-    # now = int(time.time() * 1e6)
-    # pr.dump_stats("stats_{}.runsnake".format(now))

@@ -24,7 +24,14 @@ class LineFollower():
         # Set an initial starting point for the tracking
         self.targetPoint = np.array([0, 0.01, 0])
         # Whether to re-publish the image with the IDed point
-        self.plotPoint = False
+        self.publishLabeledImage = args.publish_labeled_image
+        # Whether to print live commands
+        self.printCommands = args.print_commands
+        # Whether to publish points of interest
+        self.publishPOI = args.publish_poi
+
+        # The width of the followed line
+        self.lineWidth = args.line_width
 
     def setupMasks(self):
         self.camera = Camera()
@@ -65,15 +72,19 @@ class LineFollower():
                                       ringOfInterest=self.croppedRing,
                                       HT=self.camera.HT,
                                       invCroppedCalibMatrix=self.invCroppedCalib,
-                                      pastGlobalPoint=self.targetPoint)
+                                      pastGlobalPoint=self.targetPoint,
+                                      width=self.lineWidth)
         # If we found a viable point, save it as the current tracked point
         if foundPoint is not None:
             self.targetPoint = foundPoint
-            self.publishFoundPoint()
-            if self.plotPoint:
-                self.publishFoundPointImage(image, frame)
+            if self.publishPOI:
+                self.publishFoundPoint()
         else:
             print "None!"
+
+        # Publish marked up image if desired
+        if self.publishLabeledImage:
+            self.publishFoundPointImage(image, frame)
 
     def publishFoundPoint(self):
         # Set up message
@@ -117,7 +128,8 @@ class LineFollower():
         msg = lcm_msgs.auto_instantiate(self.tableChannel)
         msg.position = direction * stepSize
         msg.velocity = TRAVEL_SPEED
-        print("Publishing relative command {} with velocity {}".format(msg.position, msg.velocity))
+        if self.printCommands
+            print("Publishing relative command {} with velocity {}".format(msg.position, msg.velocity))
         self.lcmobj.publish(self.tableChannel, msg.encode())
 
     @property
@@ -137,13 +149,26 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--image-channel",
                         help="Channel on which to track line position",
                         default="IMAGE_RAW")
-    parser.add_argument("-t", "--table-channel",
-                        help="Channel on which to send table commands",
-                        default="POSITION_COMMAND")
+    parser.add_argument("-o", "--publish-poi",
+                        help="Whether to publish points of interest",
+                        action="store_false")
+    parser.add_argument("-p", "--publish-labeled-image",
+                        help="Publishes on the IMAGE_TRACKING channel",
+                        action="store_true")
+    parser.add_argument("-P", "--print-commands",
+                        help="Prints the table commands that are occurring",
+                        action="store_false")
     parser.add_argument("-r", "--command-rate",
                         help="Rate at which to send out position commands",
                         type=float,
                         default=10.0)
+    parser.add_argument("-t", "--table-channel",
+                        help="Channel on which to send table commands",
+                        default="POSITION_COMMAND")
+    parser.add_argument("line_width",
+                        help="Width of the line in meters (usually 0.003, but"
+                             "actually choose each time)",
+                        type=float)
     args = parser.parse_args()
 
     LF = LineFollower(args)

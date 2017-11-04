@@ -1,4 +1,20 @@
 ###############################################################################
+Fixing LCM networking error
+###############################################################################
+If you are getting errors like this:
+    LCM: TTL set to zero, traffic will not leave localhost.
+    Exception: java.net.SocketException: No such device
+
+    connect: Network is unreachable
+    Unable to read routing table (fgets): Network is unreachable
+    No route to 239.255.76.67
+Then
+   sudo ifconfig lo multicast
+   sudo route add -net 224.0.0.0 netmask 240.0.0.0 dev lo
+###############################################################################
+
+
+###############################################################################
 To run calibration
 cd projects/controls-drawer
 source env.sh
@@ -22,7 +38,7 @@ cd projects/controls-drawer
 source env.sh
 
 # First, put all the pictures of the square calibration image for the Crenova
-# 	 camera in crenova_iscope_endoscope_2Mpix/square_images/*.jpg
+#    camera in crenova_iscope_endoscope_2Mpix/square_images/*.jpg
 # Edit the file to change various things
 subl software/drivers/general_camera_tests/test_calibration.py
 python software/drivers/general_camera_tests/test_calibration.py
